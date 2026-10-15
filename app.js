@@ -851,7 +851,10 @@ function library() {
   let key = state.library || "view";
   return `<div class="sectionhead"><span class="eyebrow">REFERÊNCIA DE CÓDIGO</span><h1>Biblioteca de códigos comentados</h1><p>Exemplos extraídos dos arquivos fornecidos. Use as referências para localizar a implementação no repositório.</p></div><div class="tabs">${libraryItems.map(([k, t]) => `<button data-library="${k}" class="${k === key ? "selected" : ""}">${escape(t)}</button>`).join("")}</div>${code(key, libraryItems.find((x) => x[0] === key)[1], key === "view" ? "Código da view com comentários didáticos." : "Trecho extraído do arquivo original anexado.")}<section class="panel"><h3>Como estudar um trecho</h3><p>Leia primeiro a assinatura da função, identifique os parâmetros, localize as chamadas a outros componentes e explique o retorno. Depois oculte os comentários e tente repetir a análise.</p></section>`;
 }
-function notes() {
+function glossary() {
+  const groups = [...new Set(SUAP_GLOSSARY.map((item) => item.category))];
+  return `<div class="sectionhead"><span class="eyebrow">REFERÊNCIA DE ESTUDO</span><h1>Glossário do SUAP</h1><p>Os termos abaixo formam uma rede de conceitos. Para investigar uma tela, acompanhe o caminho da requisição: a URL encontra a rota, a view coordena o processamento, os models consultam os dados, o contexto alimenta o template e a resposta volta ao navegador. Permissões, autenticação e regras contextuais atravessam esse fluxo.</p></div><section class="panel glossary-guide"><h2>Como usar este glossário</h2><p>Comece pelo termo que apareceu durante a leitura e depois siga as relações indicadas na explicação. O objetivo é reconhecer a responsabilidade de cada camada e fazer perguntas melhores ao investigar uma manutenção.</p><div class="glossary-flow"><span>Requisição</span><b>→</b><span>URL e rota</span><b>→</b><span>View</span><b>→</b><span>Dados e regras</span><b>→</b><span>Template ou resposta</span></div></section>${groups.map((category) => `<section class="glossary-section"><h2>${escape(category)}</h2><div class="glossary-grid">${SUAP_GLOSSARY.filter((item) => item.category === category).map((item) => `<details class="glossary-item"><summary><span>${escape(item.term)}</span><small>${escape(item.category)}</small></summary><div class="glossary-body"><p><strong>O que significa:</strong> ${escape(item.definition)}</p><p><strong>No SUAP:</strong> ${escape(item.context)}</p><p><strong>Exemplo:</strong> <code>${escape(item.example)}</code></p></div></details>`).join("")}</div></section>`).join("")}`;
+}function notes() {
   return `<div class="sectionhead"><span class="eyebrow">SEU CADERNO</span><h1>Minhas anotações</h1><p>As notas são salvas neste navegador e podem ser exportadas em Markdown.</p></div>${notesBlock("geral")}${course.map((m) => `<div class="panel"><h3>${m.name}</h3><p>${escape((state["note:" + m.id] || "").slice(0, 350)) || "Nenhuma anotação registrada."}</p><button class="btn secondary" data-page="${m.id}">Abrir módulo →</button></div>`).join("")}`;
 }
 function progress() {
@@ -866,6 +869,11 @@ function searchPage(q) {
       id: m.id,
       title: m.name,
       content: m.desc + " " + m.goals.join(" ") + " " + m.tasks.join(" "),
+    })),
+    ...SUAP_GLOSSARY.map((item) => ({
+      id: "glossary",
+      title: item.term,
+      content: item.definition + " " + item.context + " " + item.example,
     })),
     ...libraryItems.map(([id, title]) => ({
       id: "library",
@@ -906,6 +914,7 @@ function render() {
           home: "Início",
           plan: "Plano de curso",
           library: "Códigos comentados",
+          glossary: "Glossário",
           notes: "Anotações",
           progress: "Progresso",
           roadmap: "Próximos encontros",
@@ -918,6 +927,8 @@ function render() {
         ? plan()
         : current === "library"
           ? library()
+          : current === "glossary"
+            ? glossary()
           : current === "notes"
             ? notes()
             : current === "progress"
@@ -1061,6 +1072,7 @@ window.addEventListener("hashchange", () => {
       "home",
       "plan",
       "library",
+      "glossary",
       "notes",
       "progress",
       "roadmap",
@@ -1076,6 +1088,7 @@ current = [
   "home",
   "plan",
   "library",
+  "glossary",
   "notes",
   "progress",
   "roadmap",

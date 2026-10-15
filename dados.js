@@ -54,3 +54,307 @@ window.SUAP_SAMPLES = {
     end: null,
   },
 };
+
+window.SUAP_GLOSSARY = [
+  {
+    term: "SUAP",
+    category: "Visão geral",
+    definition: "O SUAP é o sistema institucional que reúne processos acadêmicos, administrativos e de gestão em uma única aplicação.",
+    context: "Durante uma investigação, o SUAP deve ser observado como um conjunto de módulos que compartilham autenticação, permissões, componentes visuais e regras de negócio.",
+    example: "O módulo edu concentra funcionalidades de ensino, como alunos, turmas, matrículas e horários."
+  },
+  {
+    term: "Django",
+    category: "Visão geral",
+    definition: "Django é o framework Python usado para estruturar grande parte do SUAP, oferecendo convenções para URLs, views, models, templates, formulários e administração.",
+    context: "Conhecer Django ajuda a reconhecer onde cada responsabilidade costuma estar e a acompanhar uma requisição desde a URL até a resposta.",
+    example: "Uma URL encaminha a requisição para uma view, que consulta um model e renderiza um template."
+  },
+  {
+    term: "Aplicação",
+    category: "Visão geral",
+    definition: "Aplicação é um conjunto organizado de código que implementa uma parte funcional do sistema.",
+    context: "No Django, uma aplicação normalmente reúne models, views, templates, forms, admin, URLs e regras específicas de um domínio.",
+    example: "edu é a aplicação que concentra funcionalidades relacionadas ao ensino."
+  },
+  {
+    term: "Módulo",
+    category: "Visão geral",
+    definition: "Módulo é uma unidade de organização do código ou do produto, criada para separar responsabilidades e facilitar a manutenção.",
+    context: "No portal, módulo também identifica cada encontro de estudo; no código, pode representar um arquivo Python ou uma área funcional do SUAP.",
+    example: "O módulo Models do SUAP estuda as classes que representam os dados acadêmicos."
+  },
+  {
+    term: "URL",
+    category: "Fluxo web",
+    definition: "URL é o endereço usado para localizar uma tela, um recurso ou uma ação na aplicação web.",
+    context: "Ela é o ponto de entrada visível da requisição. Ao analisar uma tela, comece pela URL para descobrir qual rota será acionada.",
+    example: "Em /edu/turma/42/, o trecho 42 pode ser recebido pela view como o identificador pk."
+  },
+  {
+    term: "Rota",
+    category: "Fluxo web",
+    definition: "Rota é a regra que associa um padrão de URL a uma função ou view.",
+    context: "O arquivo de URLs não executa a regra de negócio; ele encaminha a requisição para o ponto correto do código.",
+    example: "path('turma/<int:pk>/', views.turma) chama views.turma quando o endereço corresponde ao padrão."
+  },
+  {
+    term: "View",
+    category: "Fluxo web",
+    definition: "View é a função ou classe que recebe a requisição, aplica decisões da aplicação e produz uma resposta.",
+    context: "É comum a view verificar permissões, buscar objetos, preparar variáveis e escolher entre HTML, PDF, JSON ou redirecionamento.",
+    example: "A view turma(request, pk) recupera uma turma e prepara alunos, diários e horários para o template."
+  },
+  {
+    term: "Template",
+    category: "Fluxo web",
+    definition: "Template é o arquivo de apresentação que combina HTML com variáveis e comandos da linguagem de templates do Django.",
+    context: "A view prepara o contexto; o template decide como os dados serão organizados e exibidos para a pessoa usuária.",
+    example: "{% if perms.edu.view_dados_pessoais %} pode controlar a exibição de uma seção de dados pessoais."
+  },
+  {
+    term: "Model",
+    category: "Dados",
+    definition: "Model é a classe Python que representa uma entidade persistida e descreve seus campos, relacionamentos e comportamentos.",
+    context: "O model concentra regras relacionadas ao dado, enquanto a view coordena a requisição e o template apresenta o resultado.",
+    example: "Turma possui campos acadêmicos e métodos como get_alunos_matriculados() e get_horarios()."
+  },
+  {
+    term: "Banco de dados",
+    category: "Dados",
+    definition: "Banco de dados é o sistema que armazena de forma persistente os registros usados pelo SUAP.",
+    context: "Models e ORM protegem o código de detalhes repetitivos do SQL, mas toda consulta ainda precisa considerar volume, filtros e segurança.",
+    example: "Uma consulta de Turma pode recuperar alunos relacionados sem carregar registros que não pertencem àquela turma."
+  },
+  {
+    term: "QuerySet",
+    category: "Dados",
+    definition: "QuerySet é uma representação de uma consulta Django que pode ser filtrada, ordenada e combinada antes de ser executada.",
+    context: "Ele permite construir consultas legíveis e normalmente é avaliado de forma tardia, quando os dados são necessários.",
+    example: "MatriculaPeriodo.objects.filter(turma=self).order_by('aluno__pessoa_fisica__nome') retorna matrículas ordenadas."
+  },
+  {
+    term: "Form",
+    category: "Entrada e relatórios",
+    definition: "Form é a estrutura que descreve campos de entrada, validações e conversão dos dados enviados pela pessoa usuária.",
+    context: "Um formulário reduz validações espalhadas pela view e oferece uma forma consistente de tratar dados inválidos antes de salvar ou consultar.",
+    example: "Um form pode receber um período, validar a data e entregar à view um valor já convertido."
+  },
+  {
+    term: "Admin",
+    category: "Interface administrativa",
+    definition: "Admin é a interface administrativa do Django adaptada pelo SUAP para listar, consultar, criar e alterar registros.",
+    context: "A configuração do admin define colunas, filtros, buscas, ações e permissões, mas não substitui as regras de segurança das views.",
+    example: "Um ModelAdmin pode definir list_display para mostrar campos úteis na lista de alunos."
+  },
+  {
+    term: "Decorator",
+    category: "Execução e segurança",
+    definition: "Decorator é uma função que envolve outra função para acrescentar comportamento sem reescrever seu corpo.",
+    context: "No SUAP, decorators deixam visíveis regras transversais como autenticação, permissão, renderização e geração de documentos.",
+    example: "@permission_required(...) pode impedir que a view seja executada por quem não tem acesso."
+  },
+  {
+    term: "@rtr()",
+    category: "Execução e segurança",
+    definition: "@rtr() é um decorator do SUAP que transforma o retorno de uma view em uma resposta renderizada por template.",
+    context: "Quando recebe um dicionário ou locals(), ele prepara o contexto; quando a view já retorna uma resposta HTTP, preserva essa resposta.",
+    example: "@rtr('horarios_turma.html') informa explicitamente o template que deve ser usado."
+  },
+  {
+    term: "@permission_required()",
+    category: "Execução e segurança",
+    definition: "@permission_required() verifica se o usuário possui uma permissão Django antes de permitir a execução da view.",
+    context: "A checagem acontece no servidor. Esconder um botão no template não é suficiente para proteger uma URL acessada diretamente.",
+    example: "@permission_required('edu.view_turma') exige a permissão edu.view_turma."
+  },
+  {
+    term: "@login_required",
+    category: "Execução e segurança",
+    definition: "@login_required exige que exista um usuário autenticado antes da execução da função protegida.",
+    context: "Autenticação confirma quem está acessando; autorização, feita por permissões ou regras, decide o que essa pessoa pode fazer.",
+    example: "Uma página interna pode exigir login mesmo quando não depende de uma permissão específica."
+  },
+  {
+    term: "@group_required()",
+    category: "Execução e segurança",
+    definition: "@group_required() restringe uma view a usuários que pertencem a um ou mais grupos determinados.",
+    context: "Use-o quando a regra estiver expressa diretamente como papel ou grupo. Quando o requisito for uma capacidade, prefira uma permissão.",
+    example: "Uma view pode exigir o grupo Coordenador de Curso para uma operação administrativa específica."
+  },
+  {
+    term: "httprr()",
+    category: "Respostas",
+    definition: "httprr() é um atalho do SUAP para redirecionar a pessoa usuária e enviar uma mensagem de sucesso, aviso ou erro.",
+    context: "Ele concentra o redirecionamento e a mensagem exibida após uma ação, evitando que cada view repita esse tratamento.",
+    example: "httprr('..', 'Registro salvo com sucesso.') retorna à tela anterior com uma mensagem."
+  },
+  {
+    term: "PDFResponse",
+    category: "Respostas",
+    definition: "PDFResponse é uma resposta HTTP configurada para entregar conteúdo no formato PDF.",
+    context: "A view pode produzir os bytes do documento e definir se o navegador deve exibir o PDF ou iniciar seu download.",
+    example: "PDFResponse(data, nome='historico.pdf', anexo=False) exibe o documento no navegador."
+  },
+  {
+    term: "Permissão",
+    category: "Acesso",
+    definition: "Permissão é uma capacidade específica que autoriza uma ação ou a visualização de determinado recurso.",
+    context: "No SUAP, a permissão pode ser declarada para um grupo, sincronizada no banco e consultada por views, templates, menus e managers.",
+    example: "edu.view_aluno representa a capacidade de visualizar informações de aluno."
+  },
+  {
+    term: "Grupo",
+    category: "Acesso",
+    definition: "Grupo é um conjunto de usuários que compartilha um papel e, normalmente, um conjunto de permissões.",
+    context: "O grupo simplifica a administração: em vez de conceder cada permissão pessoa por pessoa, o sistema associa o usuário ao papel adequado.",
+    example: "Organizador de Minicurso pode receber permissões de aluno necessárias para suas atividades."
+  },
+  {
+    term: "permissions.yaml",
+    category: "Acesso",
+    definition: "permissions.yaml é o arquivo declarativo que descreve grupos e as permissões que devem ser associadas a eles.",
+    context: "Ele funciona como uma fonte de configuração; as permissões só passam a existir para o uso das telas depois que o processo de sincronização é executado.",
+    example: "Um grupo pode declarar view_aluno e view_dados_pessoais dentro do app edu."
+  },
+  {
+    term: "sync_permissions",
+    category: "Acesso",
+    definition: "sync_permissions é o comando que lê as declarações de permissões e atualiza grupos e permissões no banco de dados.",
+    context: "Depois de alterar o YAML, confirme a sincronização e teste as permissões efetivas do usuário, inclusive por URL direta.",
+    example: "O comando transforma a declaração de edu.view_aluno em uma associação persistida no banco."
+  },
+  {
+    term: "has_perm()",
+    category: "Acesso",
+    definition: "has_perm() é o método usado para perguntar se um usuário possui uma permissão específica.",
+    context: "A resposta considera as permissões diretas e as herdadas dos grupos, por isso a investigação deve observar o conjunto completo de acessos.",
+    example: "request.user.has_perm('edu.view_aluno') retorna verdadeiro ou falso para aquele usuário."
+  },
+  {
+    term: "perms",
+    category: "Acesso",
+    definition: "perms é o objeto de permissões disponível em templates ou módulos de regras para consultar capacidades do usuário.",
+    context: "Ele permite controlar trechos da interface, mas a proteção decisiva de uma operação deve existir também na view ou em outra camada do servidor.",
+    example: "{% if perms.edu.view_dados_pessoais %} mostra uma seção somente quando a permissão está disponível."
+  },
+  {
+    term: "Contexto",
+    category: "Fluxo web",
+    definition: "Contexto é o conjunto de variáveis que a view entrega ao template para que ele monte a página.",
+    context: "Um contexto bem definido faz a separação entre decisão e apresentação: a view prepara dados e o template os organiza.",
+    example: "locals() pode fornecer title, alunos, turnos e diarios_por_sigla para o template."
+  },
+  {
+    term: "Requisição HTTP",
+    category: "Fluxo web",
+    definition: "Requisição HTTP é a mensagem enviada pelo navegador ao servidor, contendo método, URL, parâmetros, dados e informações da sessão.",
+    context: "A view recebe essa requisição e deve tratar seus dados de forma explícita, validada e coerente com a operação solicitada.",
+    example: "request.GET pode carregar filtros; request.POST normalmente carrega dados enviados por um formulário."
+  },
+  {
+    term: "Resposta HTTP",
+    category: "Respostas",
+    definition: "Resposta HTTP é o resultado devolvido pelo servidor, com status, cabeçalhos e conteúdo para o navegador ou outro cliente.",
+    context: "Uma resposta pode ser HTML, JSON, PDF, arquivo para download ou redirecionamento, conforme a finalidade da view.",
+    example: "@rtr() produz uma resposta HTML quando o retorno da view contém dados para um template."
+  },
+  {
+    term: "Redirecionamento",
+    category: "Respostas",
+    definition: "Redirecionamento é uma resposta que orienta o navegador a fazer uma nova requisição para outra URL.",
+    context: "Ele é útil após salvar ou excluir dados, pois evita o reenvio acidental de um formulário ao atualizar a página.",
+    example: "Depois de salvar uma turma, httprr() pode levar o usuário de volta à tela de detalhes."
+  },
+  {
+    term: "Middleware",
+    category: "Arquitetura",
+    definition: "Middleware é uma camada que participa do processamento das requisições antes ou depois das views.",
+    context: "Ele pode tratar sessão, autenticação, mensagens, segurança e outros comportamentos comuns sem duplicá-los em cada view.",
+    example: "Um middleware pode disponibilizar o usuário autenticado para o restante do fluxo."
+  },
+  {
+    term: "ORM",
+    category: "Dados",
+    definition: "ORM é o mapeamento objeto-relacional que permite trabalhar com tabelas e registros por meio de classes e objetos Python.",
+    context: "O ORM do Django aproxima o código da linguagem do domínio, mas não elimina a necessidade de entender relacionamentos e custo das consultas.",
+    example: "Turma.objects.filter(ano_letivo=ano) constrói uma consulta sem escrever SQL diretamente."
+  },
+  {
+    term: "Migration",
+    category: "Dados",
+    definition: "Migration é o registro versionado de uma alteração na estrutura do banco de dados.",
+    context: "Quando um model muda, migrations ajudam a aplicar essa mudança de forma repetível nos ambientes de desenvolvimento e homologação.",
+    example: "Adicionar um campo ao model exige uma migration para criar a coluna correspondente."
+  },
+  {
+    term: "Manager",
+    category: "Dados",
+    definition: "Manager é o objeto que oferece consultas e comportamentos de acesso a um model.",
+    context: "Um model pode ter managers diferentes para representar visões distintas dos dados, como registros completos ou filtrados por regras institucionais.",
+    example: "Turma.objects e Turma.locals podem selecionar conjuntos diferentes de turmas."
+  },
+  {
+    term: "Sessão",
+    category: "Execução e segurança",
+    definition: "Sessão é o mecanismo que mantém informações associadas a uma pessoa usuária entre várias requisições.",
+    context: "Ela permite manter login, mensagens e preferências temporárias, mas não deve ser usada para substituir uma autorização no servidor.",
+    example: "request.session pode registrar uma etapa de autenticação de dois fatores."
+  },
+  {
+    term: "Autenticação",
+    category: "Acesso",
+    definition: "Autenticação é o processo de confirmar a identidade de quem está acessando o sistema.",
+    context: "Depois de autenticar, o SUAP consegue associar a requisição a um usuário e avaliar seus grupos e permissões.",
+    example: "@login_required exige autenticação antes de abrir uma tela interna."
+  },
+  {
+    term: "Autorização",
+    category: "Acesso",
+    definition: "Autorização é a decisão sobre quais ações e dados uma pessoa autenticada pode acessar.",
+    context: "Ela combina permissões, grupos e regras contextuais, como curso, campus, situação do aluno ou vínculo institucional.",
+    example: "Ter login não garante autorização para visualizar dados pessoais de qualquer aluno."
+  },
+  {
+    term: "CRUD",
+    category: "Dados",
+    definition: "CRUD resume as operações de criar, consultar, atualizar e excluir registros.",
+    context: "A sigla ajuda a identificar quais ações uma tela oferece e quais permissões add, view, change e delete podem estar envolvidas.",
+    example: "O admin pode oferecer consulta e alteração de Turma, enquanto uma view específica executa uma ação de atualização."
+  },
+  {
+    term: "Relatório",
+    category: "Entrada e relatórios",
+    definition: "Relatório é uma apresentação organizada de dados para consulta, impressão, exportação ou tomada de decisão.",
+    context: "No SUAP, relatórios podem usar forms para filtros, views para preparar dados e templates HTML ou PDF para apresentação.",
+    example: "Um relatório de horários pode filtrar uma turma e gerar uma versão para impressão."
+  },
+  {
+    term: "Formset",
+    category: "Entrada e relatórios",
+    definition: "Formset é um conjunto de formulários relacionados tratados como uma unidade.",
+    context: "Ele é útil quando uma tela precisa editar várias linhas semelhantes mantendo validação e processamento coordenados.",
+    example: "Uma tela pode usar um formset para editar horários de várias aulas da mesma turma."
+  },
+  {
+    term: "Signal",
+    category: "Arquitetura",
+    definition: "Signal é um mecanismo de eventos que permite executar uma função quando uma ocorrência específica acontece no Django.",
+    context: "Signals podem automatizar efeitos complementares, mas exigem cuidado porque tornam o fluxo menos visível para quem lê apenas a view.",
+    example: "Um signal post_save pode criar um registro relacionado depois que um objeto é salvo."
+  },
+  {
+    term: "Transação",
+    category: "Dados",
+    definition: "Transação é um conjunto de operações tratado como uma unidade: todas são confirmadas ou o estado é revertido em caso de falha.",
+    context: "Ela protege alterações relacionadas, especialmente quando uma ação atualiza vários registros e não pode deixar o banco pela metade.",
+    example: "A remoção de alunos e a atualização de suas situações podem precisar ocorrer na mesma transação."
+  },
+  {
+    term: "Ambiente virtual",
+    category: "Desenvolvimento",
+    definition: "Ambiente virtual é uma instalação isolada das dependências Python usadas por um projeto.",
+    context: "Ele reduz conflitos entre versões e torna mais previsível executar comandos, testes e ferramentas do SUAP.",
+    example: "Antes de rodar o servidor, ative o ambiente virtual e instale as dependências do projeto."
+  }
+];

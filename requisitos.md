@@ -1,4 +1,4 @@
-# Requisitos — Portal SUAP EDU: Guia do Participante
+# Requisitos — Portal SUAP EDU: Guia do SUAP
 
 **Versão do documento:** 1.1  
 **Estado do projeto:** protótipo funcional com três encontros com material disponível; três encontros planejados  
@@ -23,13 +23,6 @@ portal_suap_participante/
 ├── fluxo_django_mtv.png        # Diagrama introdutório
 ├── plano_curso.md              # Plano integral de 12 horas
 ├── README.md                   # Instruções de uso
-└── fontes/
-    ├── fluxo_01.md
-    ├── fluxo_02.md
-    ├── fluxo_03.md
-    ├── model_turma.py
-    ├── response.py
-    └── view_turma_comentada.py
 ```
 
 **Ação inicial no Codex:** abrir os arquivos atuais, executar o portal e mapear as funções existentes antes de refatorar. Não substituir o projeto por uma implementação nova sem necessidade.
@@ -85,7 +78,7 @@ Preservar nomes reais de funções, classes, argumentos, managers e decorators. 
 
 ### RC-04 — Referência de linhas
 
-Exibir caminho do arquivo e, quando confirmado, intervalo de linhas. Registrar commit/versão da fonte. Linhas são referências do checkout analisado, não identificadores estáveis; conferir após alterações.
+Exibir caminho do arquivo e, quando confirmado, intervalo de linhas. Linhas são referências do checkout analisado, não identificadores estáveis; conferir após alterações.
 
 ### RC-05 — Progressão
 
@@ -139,7 +132,7 @@ Para `@documento`, forms, templates e sincronização de permissões, usar os ro
 | RNF-07 | Segurança do front-end | Escapar conteúdo dinâmico ao inserir HTML; não executar trechos de código exibidos. |
 | RNF-08 | Manutenibilidade | Separar conteúdo, estado, renderização e estilos sempre que possível, sem complexidade desnecessária. |
 | RNF-09 | Compatibilidade | Navegadores modernos (Chrome, Firefox e Edge). |
-| RNF-10 | Clareza de origem | Identificar código real, exemplo didático, versão/commit e limitações das referências. |
+| RNF-10 | Clareza de origem | Identificar código real, exemplo didático, versão e limitações das referências. |
 | RNF-11 | Preservação | Melhorias não devem remover funcionalidades já existentes nem apagar dados locais do participante sem aviso. |
 
 ## 8. Regras de negócio da aplicação
@@ -168,13 +161,6 @@ portal_suap_participante/
 ├── requisitos.md
 ├── visao_geral.md
 ├── README.md
-└── fontes/
-    ├── fluxo_01.md
-    ├── fluxo_02.md
-    ├── fluxo_03.md
-    ├── model_turma.py
-    ├── response.py
-    └── view_turma_comentada.py
 ```
 
 **Evolução opcional:** separar `dados.js` por módulo ou gerar um bundle estático a partir de Markdown/JSON. Evitar dependências que quebrem a abertura direta por `file://` sem oferecer alternativa.

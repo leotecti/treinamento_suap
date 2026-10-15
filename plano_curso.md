@@ -81,7 +81,7 @@ Os seis encontros seguem os temas apresentados no menu do portal. Cada encontro 
 
 ## Bibliografia e referências
 
-- Código SUAP no commit `936e818c17`.
+- Código SUAP do repositório analisado.
 - Documentação Django 4.1: URL dispatcher, views, forms, models, admin, testing.
 - Documentação Python 3: exceções, depuração, `decimal.Decimal`.
 - Documentação behave 1.2.6: cenários BDD.

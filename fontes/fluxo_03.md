@@ -301,7 +301,7 @@ Contexto: o grupo `Organizador de Minicurso` precisava visualizar dados de aluno
 
 Mostrar o diff do merge:
 
-- `400d69076d`
+- alteração correspondente à issue 1144
 
 Arquivo:
 
@@ -339,7 +339,7 @@ Contexto: a demanda nao foi resolvida apenas no `permissions.yaml`; ela alterou 
 
 Mostrar o diff do merge:
 
-- `051aed03cd`
+- alteração correspondente à issue 1168
 
 Arquivo:
 
@@ -385,7 +385,7 @@ Contexto: a issue removeu o botao/menu `Documentos` para alunos especiais.
 
 Mostrar o diff do merge:
 
-- `6fae1e80a6`
+- alteração correspondente à issue 1157
 
 Arquivo:
 

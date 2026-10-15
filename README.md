@@ -1,4 +1,4 @@
-# Portal SUAP EDU — Guia do Participante
+# Portal SUAP EDU — Guia do SUAP
 
 Portal estático de estudo para novos desenvolvedores do SUAP, com foco no módulo `edu`.
 
@@ -21,11 +21,10 @@ Extraia o ZIP e abra `index.html` no navegador. Não é necessário servidor, in
 - `index.html`, `style.css`, `chamados.css`, `app.js`, `dados.js`: interface, área reutilizável de chamados e dados.
 - `fluxo_django_mtv.png`: diagrama introdutório.
 - `plano_curso.md`: documento integral do plano.
-- `fontes/`: três roteiros originais, arquivos anexados do model e do response, view comentada.
 
 ## Precisão e segurança
 
-Os trechos de código foram extraídos dos arquivos anexados. Os números de linha referem-se à versão fornecida, e devem ser verificados no repositório antes de cada treinamento. Os três roteiros originais são materiais de instrutor e ficam apenas em `fontes/`, não aparecem como aulas do participante.
+Os trechos de código foram extraídos dos arquivos anexados. Os números de linha referem-se à versão fornecida, e devem ser verificados no repositório antes de cada treinamento.
 
 As questões são formativas e não substituem avaliação prática. O progresso e as anotações ficam no `localStorage` do navegador; não há contas, sincronização ou banco de dados.
 

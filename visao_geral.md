@@ -1,8 +1,8 @@
-# Visão Geral — Portal SUAP EDU: Guia do Participante
+# Visão Geral — Portal SUAP EDU: Guia do SUAP
 
 ## 1. Apresentação
 
-O **Portal SUAP EDU — Guia do Participante** é uma aplicação web estática, desenvolvida com **HTML, CSS e JavaScript**, destinada a apoiar a formação de novos desenvolvedores responsáveis pela manutenção e evolução do SUAP, com prioridade para exemplos reais do módulo `edu` (Ensino).
+O **Portal SUAP EDU — Guia do SUAP** é uma aplicação web estática, desenvolvida com **HTML, CSS e JavaScript**, destinada a apoiar a formação de novos desenvolvedores responsáveis pela manutenção e evolução do SUAP, com prioridade para exemplos reais do módulo `edu` (Ensino).
 
 O portal não é um clone do SUAP nem um ambiente para executar suas rotinas. É um **material de aprendizagem e consulta**, que explica conceitos, relaciona arquivos reais do repositório, propõe investigações no VSCode e registra o progresso individual. Deve ser útil durante os encontros presenciais/remotos e como referência após o curso.
 
@@ -101,7 +101,7 @@ Gabaritos internos e roteiros de condução devem permanecer em material separad
 
 - Interface: HTML5, CSS3 e JavaScript puro.
 - Execução: arquivos estáticos abertos no navegador, sem servidor obrigatório, banco de dados ou autenticação.
-- Conteúdo: atualmente incorporado em `dados.js` e `app.js`, com fontes de referência em `fontes/`.
+- Conteúdo: atualmente incorporado em `dados.js` e `app.js`.
 - Persistência: `localStorage` para tarefas, respostas, tema e anotações.
 - Exportação: arquivo Markdown gerado no navegador.
 - Compatibilidade desejada: navegadores modernos, desktop e celular, inclusive uso offline.
@@ -112,7 +112,7 @@ A evolução pode separar os conteúdos em arquivos Markdown/JSON, desde que pre
 
 Conforme o plano de curso fornecido, o repositório analisado utiliza **Django 4.1.5**, **DRF 3.14.0**, **Celery 5.2.7**, **behave 1.2.6** e PostgreSQL no ambiente de desenvolvimento. Os arquivos relevantes incluem `edu/urls.py`, `edu/views.py`, `edu/forms.py`, `edu/admin.py`, `edu/perms.py`, `edu/managers.py`, `edu/models/*.py`, `djtools/utils/response.py`, `edu/tests.py` e `edu/features/*.feature`.
 
-**Referência do levantamento:** commit `936e818c17` (investigação registrada em 11/10/2026). Caminhos e linhas de código precisam ser conferidos no checkout efetivamente utilizado; a documentação não deve presumir que continuam idênticos.
+**Referência do levantamento:** investigação registrada em 11/10/2026. Caminhos e linhas de código precisam ser conferidos no checkout efetivamente utilizado; a documentação não deve presumir que continuam idênticos.
 
 ## 11. Escopo e limites
 

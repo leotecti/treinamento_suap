@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vídeos · Treinamento SUAP</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#20252b}.container{max-width:1100px;margin:0 auto;padding:32px 20px}h1{margin:0 0 8px}.descricao{color:#5f6873;margin:0 0 24px}.site-nav{display:flex;align-items:center;gap:12px;margin-bottom:24px}.site-nav a{color:#075fc7;text-decoration:none;font-weight:bold}.site-nav a:hover{text-decoration:underline}.site-nav .separador{color:#a0a8b1}.encontros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}.encontro{border:1px solid #dce2e8;border-radius:8px;background:#fff;color:#20252b;padding:10px 13px;cursor:pointer}.encontro:hover,.encontro.ativo{background:#eef6ff;color:#075fc7;border-color:#9bc5f5;font-weight:bold}.encontro:disabled{cursor:not-allowed;opacity:.48;color:#687586;background:#f4f6f8}.player{width:100%;height:auto;aspect-ratio:16/9;display:block;background:#000;border-radius:10px;margin-bottom:28px;object-fit:contain} .indice{background:#fff;border-radius:10px;padding:24px;box-shadow:0 2px 10px #0000000a}.topico{display:flex;align-items:center;gap:16px;width:100%;padding:16px 12px;border:0;border-bottom:1px solid #e8ebef;background:transparent;text-align:left;cursor:pointer;font-size:15px;color:#20252b}.topico:hover,.topico.ativo{background:#eef6ff;color:#075fc7}.tempo{color:#687586;min-width:65px;font-variant-numeric:tabular-nums}.nome{flex:1;min-width:0;overflow-wrap:anywhere}.aviso{padding:14px 16px;border-left:4px solid #e3a03c;background:#fff6e8;color:#86510f;border-radius:8px;margin:16px 0}.vazio{color:#687586;padding:10px 0}@media(max-width:600px){.player{border-radius:6px}.encontros{gap:6px}.encontro{padding:9px 10px}.topico{font-size:14px}.tempo{min-width:58px}.container{padding:20px 12px}.indice{padding:14px}.topico{gap:10px;padding:14px 8px}}
+  .shell{display:flex;min-height:100vh}.sidebar{width:266px;flex-shrink:0;background:#101f37;color:#dce7f8;padding:28px 16px;position:sticky;top:0;height:100vh;overflow:auto}.brand{display:flex;gap:12px;align-items:center;padding:2px 12px 32px}.logo{display:grid;place-items:center;width:43px;height:43px;border-radius:13px;background:#3178eb;color:white;font-size:26px;font-weight:800}.brand strong{display:block;font-size:18px;line-height:1.2}.brand em{font-style:normal;color:#7db5ff}.brand small{display:block;color:#9db0c9;font-size:12px}.navtitle{font-size:10px;letter-spacing:1.6px;font-weight:800;color:#8298b6;margin:14px 12px 9px}.sidebar nav{display:grid;gap:3px}.sidebar nav a{display:block;width:100%;color:#b9c9df;text-decoration:none;text-align:left;padding:11px 12px;border-radius:10px;font-size:13px;font-weight:550}.sidebar nav a:hover,.sidebar nav a.active{background:#243c60;color:white}.sidebar nav a span{display:inline-grid;place-items:center;width:28px;margin-right:7px;color:#90a9ca;font-weight:800}.maincol{flex:1;min-width:0;overflow:hidden}.sidefoot{margin:38px 9px 10px;padding:16px;background:#1c3251;border:1px solid #304b6f;border-radius:13px;font-size:12px}.sidefoot p{margin:4px 0 0;color:#b6c9df}.container{max-width:1100px}.container .site-nav{display:none}@media(max-width:760px){.sidebar{position:relative;width:100%;height:auto}.shell{display:block}.maincol .container{padding:20px 12px}.sidefoot{display:none}}</style>
+</head>
+<body>
+  <div class="shell"><aside class="sidebar"><div class="brand"><span class="logo">S</span><div><strong>SUAP <em>EDU</em></strong><small>Guia do participante</small></div></div><div class="navtitle">APRENDIZAGEM</div><nav aria-label="Aprendizagem"><a href="../index.html"><span>⌂</span> Início</a><a href="../index.html#plan"><span>▦</span> Plano de curso</a><a href="../index.html#m1"><span>01</span> Introdução</a><a href="../index.html#m2"><span>02</span> Decoradores do SUAP</a><a href="../index.html#m3"><span>03</span> Permissões do SUAP</a><a href="../index.html#m4"><span>04</span> Forms e relatórios</a><a href="../index.html#m5"><span>05</span> Models do SUAP</a><a href="../index.html#m6"><span>06</span> Admin do SUAP</a></nav><div class="navtitle">SEUS RECURSOS</div><nav aria-label="Seus recursos"><a class="active" href="videos.html"><span>▶</span> Vídeos</a><a href="../index.html#library"><span>⌘</span> Códigos comentados</a><a href="../index.html#notes"><span>✎</span> Minhas anotações</a><a href="../index.html#progress"><span>✓</span> Meu progresso</a></nav><div class="sidefoot"><strong>Aprenda no código real.</strong><p>Explore, investigue e valide.</p></div></aside><div class="maincol">
+  <main class="container">
+    <nav class="site-nav" aria-label="Navegação dos vídeos"><a href="../index.html">← Voltar ao portal</a><span class="separador">·</span><a href="#listaEncontros">Encontros</a></nav>
+    <h1 id="tituloPagina">Vídeos do treinamento</h1>
+    <p class="descricao">São 6 encontros de 2 horas, totalizando 12 horas. Selecione um encontro e use o índice para acessar diretamente cada assunto.</p>
+    <nav class="encontros" id="listaEncontros" aria-label="Encontros do treinamento"></nav>
+    <video id="videoTreinamento" class="player" controls preload="metadata" playsinline>
+      <source id="fonteVideo" src="" type="video/mp4">
+      Seu navegador não suporta a reprodução de vídeo.
+    </video>
+    <p id="avisoVideo" class="aviso" hidden></p>
+    <section class="indice"><h2 id="tituloIndice">Índice de assuntos</h2><div id="listaTopicos"></div></section>
+  </main>
+  </div></div>
+  <script src="videos.js"></script>
+  <script>
+    const video=document.getElementById('videoTreinamento');
+    const fonte=document.getElementById('fonteVideo');
+    const listaEncontros=document.getElementById('listaEncontros');
+    const listaTopicos=document.getElementById('listaTopicos');
+    const aviso=document.getElementById('avisoVideo');
+    let atual=0;
+    function paraSegundos(tempo){const partes=tempo.split(':').map(Number);if(partes.length!==3)throw new Error('Use o formato HH:MM:SS');return partes[0]*3600+partes[1]*60+partes[2]}
+    function selecionarEncontro(indice){
+      atual=indice;const item=VIDEOS_ENCONTROS[indice];
+      document.querySelectorAll('.encontro').forEach((el,i)=>el.classList.toggle('ativo',i===indice));
+      document.getElementById('tituloPagina').textContent='Encontro '+item.encontro+' · '+item.titulo;
+      fonte.src=item.arquivo;video.load();
+      aviso.hidden=true;aviso.textContent='';
+      video.onerror=()=>{aviso.hidden=false;aviso.textContent='O vídeo deste encontro ainda não foi adicionado. Coloque o arquivo “'+item.arquivo+'” na pasta videos/ para disponibilizá-lo.'};
+      listaTopicos.innerHTML='';
+      if(!item.topicos.length){listaTopicos.innerHTML='<p class="vazio">O índice de assuntos será preenchido quando o vídeo e seus tempos forem adicionados.</p>';return}
+      item.topicos.forEach(topico=>{const botao=document.createElement('button');botao.type='button';botao.className='topico';botao.innerHTML='<span class="tempo">'+topico[1]+'</span><span class="nome">'+topico[0]+'</span><span aria-hidden="true">▶</span>';botao.addEventListener('click',async()=>{const segundo=paraSegundos(topico[1]);if(Number.isFinite(video.duration)&&segundo>video.duration){alert('Este assunto está além da duração do vídeo.');return}video.currentTime=segundo;document.querySelectorAll('.topico').forEach(el=>el.classList.remove('ativo'));botao.classList.add('ativo');try{await video.play()}catch{console.info('Clique em Play para continuar.')}});listaTopicos.appendChild(botao)})
+    }
+    VIDEOS_ENCONTROS.forEach((item,indice)=>{const botao=document.createElement('button');botao.type='button';botao.className='encontro';botao.textContent=String(item.encontro).padStart(2,'0')+' · '+item.titulo;if(indice>0){botao.disabled=true;botao.tabIndex=-1;botao.title='Vídeo ainda não disponível'}else{botao.addEventListener('click',()=>selecionarEncontro(indice))}listaEncontros.appendChild(botao)});
+    selecionarEncontro(0);
+  </script>
+</body>
+</html>
+

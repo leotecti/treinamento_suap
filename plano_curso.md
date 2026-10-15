@@ -60,14 +60,16 @@ Conhecer → Localizar → Compreender → Investigar → Corrigir → Validar.
 
 ## Cronograma
 
-| Encontro | Tema | Caso principal | Tipo de atividade |
-|---|---|---|---|
-| 1 | Introdução ao fluxo do SUAP | URL → view → template na tela da turma | A — Exploração |
-| 2 | Decoradores do SUAP | Decoradores, respostas e documentos PDF | A/C — Exploração e implementação |
-| 3 | Permissões do SUAP | Grupos, sincronização e regras contextuais | A/B — Exploração e diagnóstico |
-| 4 | Forms e relatórios do SUAP | Formulários, validações e filtros de relatórios | A/C — Exploração e implementação |
-| 5 | Models do SUAP | Turma, relacionamentos, managers e métodos de negócio | A/B — Exploração e diagnóstico |
-| 6 | Admin do SUAP | Listagens, filtros, buscas, ações e permissões administrativas | A/C — Exploração e implementação |
+Os seis encontros seguem os temas apresentados no menu do portal. Cada encontro tem duração de duas horas.
+
+| Encontro | Tema do menu | Caso principal | Tipo de atividade | Duração |
+|---|---|---|---|---|
+| 1 | Introdução ao fluxo do SUAP | URL → view → template na tela da turma | A — Exploração | 2 horas |
+| 2 | Decoradores do SUAP | Decoradores, respostas e documentos PDF | A/C — Exploração e implementação | 2 horas |
+| 3 | Permissões do SUAP | Grupos, sincronização e regras contextuais | A/B — Exploração e diagnóstico | 2 horas |
+| 4 | Forms e relatórios | Formulários, validações e filtros de relatórios | A/C — Exploração e implementação | 2 horas |
+| 5 | Models do SUAP | Turma, relacionamentos, managers e métodos de negócio | A/B — Exploração e diagnóstico | 2 horas |
+| 6 | Admin do SUAP | Listagens, filtros, buscas, ações e permissões administrativas | A/C — Exploração e implementação | 2 horas |
 
 ## Avaliação
 

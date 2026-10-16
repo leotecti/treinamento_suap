@@ -43,7 +43,7 @@
       if(!item.topicos.length){listaTopicos.innerHTML='<p class="vazio">O índice de assuntos será preenchido quando o vídeo e seus tempos forem adicionados.</p>';return}
       item.topicos.forEach(topico=>{const botao=document.createElement('button');botao.type='button';botao.className='topico';botao.innerHTML='<span class="tempo">'+topico[1]+'</span><span class="nome">'+topico[0]+'</span><span aria-hidden="true">▶</span>';botao.addEventListener('click',async()=>{const segundo=paraSegundos(topico[1]);if(Number.isFinite(video.duration)&&segundo>video.duration){alert('Este assunto está além da duração do vídeo.');return}video.currentTime=segundo;document.querySelectorAll('.topico').forEach(el=>el.classList.remove('ativo'));botao.classList.add('ativo');try{await video.play()}catch{console.info('Clique em Play para continuar.')}});listaTopicos.appendChild(botao)})
     }
-    VIDEOS_ENCONTROS.forEach((item,indice)=>{const botao=document.createElement('button');botao.type='button';botao.className='encontro';botao.textContent=String(item.encontro).padStart(2,'0')+' · '+item.titulo;if(indice>0){botao.disabled=true;botao.tabIndex=-1;botao.title='Vídeo ainda não disponível'}else{botao.addEventListener('click',()=>selecionarEncontro(indice))}listaEncontros.appendChild(botao)});
+    VIDEOS_ENCONTROS.forEach((item,indice)=>{const botao=document.createElement('button');botao.type='button';botao.className='encontro';botao.textContent=String(item.encontro).padStart(2,'0')+' · '+item.titulo;if(indice>1){botao.disabled=true;botao.tabIndex=-1;botao.title='Vídeo ainda não disponível'}else{botao.addEventListener('click',()=>selecionarEncontro(indice))}listaEncontros.appendChild(botao)});
     selecionarEncontro(0);
   </script>
 </body>

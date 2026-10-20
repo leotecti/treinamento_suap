@@ -152,7 +152,47 @@ const course = [
       ],
     ],
   },
-];
+  {
+    id: "m4",
+    num: "04",
+    name: "Forms e relatórios",
+    desc: "Aprenda a criar, validar e testar formulários, consultas, relatórios e PDFs no SUAP.",
+    goals: [
+      "Diferenciar FormPlus e ModelFormPlus",
+      "Relacionar form, view, model e template",
+      "Criar filtros, relatórios e PDFs autenticáveis",
+      "Editar registros com instance e save()",
+      "Usar recursos específicos do SUAP com segurança",
+    ],
+    tasks: [
+      "Acompanhe o ciclo de um formulário desde a URL até a resposta.",
+      "Compare um relatório GET com uma edição POST.",
+      "Explique o papel de is_valid(), cleaned_data, instance e processar().",
+      "Analise um AutocompleteWidget e seus filtros dependentes.",
+      "Teste uma atividade de relatório, PDF ou edição em ambiente isolado.",
+      "Execute o checklist de permissões, escopo e acesso direto à URL.",
+    ],
+    quiz: [
+      [
+        "Qual classe é mais adequada para um formulário que não salva diretamente um model?",
+        ["ModelFormPlus", "FormPlus", "ModelAdminPlus"],
+        1,
+        "FormPlus é usado para filtros, consultas e operações que não correspondem a um único model.",
+      ],
+      [
+        "O que instance=obj indica em um ModelFormPlus?",
+        ["Que um novo objeto será criado", "Que o objeto existente será editado", "Que a validação será ignorada"],
+        1,
+        "A instância existente é carregada e form.save() atualiza esse registro.",
+      ],
+      [
+        "Por que um formulário de relatório costuma usar GET?",
+        ["Para manter filtros na URL", "Para enviar arquivos", "Para esconder a consulta"],
+        0,
+        "GET é adequado para consultas e permite atualizar, compartilhar ou salvar a URL com os filtros.",
+      ],
+    ],
+  },];
 const module2Course = course.find((m) => m.id === "m2");
 module2Course.desc =
   "Compreenda como os decorators controlam autenticação, autorização, renderização, transações e geração de documentos no SUAP.";
@@ -428,7 +468,7 @@ const modulePercent = (m) => Math.round((moduleDone(m) / moduleTotal(m)) * 100);
 const card = (m) =>
   `<section class="modulecard"><span class="tag">MÓDULO ${m.num} · DISPONÍVEL</span><h3>${m.name}</h3><p>${m.desc}</p><div class="bar"><div style="width:${modulePercent(m)}%"></div></div><span class="muted small">${moduleDone(m)}/${moduleTotal(m)} atividades realizadas</span><button class="btn" data-page="${m.id}">Estudar módulo →</button></section>`;
 function home() {
-  return `<div class="hero"><span class="eyebrow">TRILHA DE APRENDIZAGEM · SUAP EDU</span><h1>Introdução ao Desenvolvimento SUAP</h1><p>Um guia de estudos com exemplos reais de código, exercícios práticos e explicações para consultar durante e depois das aulas.</p><button class="btn" data-page="m1">Começar pelo módulo 01 →</button></div><div class="stats"><div class="stat"><strong>12 h</strong><span>6 encontros · 2 h cada</span></div><div class="stat"><strong>03</strong><span>Módulos de estudo disponíveis</span></div><div class="stat"><strong>${course.reduce((n, m) => n + moduleDone(m), 0)}/${course.reduce((n, m) => n + moduleTotal(m), 0)}</strong><span>Atividades realizadas</span></div></div><section class="panel"><span class="tag">ENTENDA A ARQUITETURA</span><h2>Do endereço à página: o fluxo MTV</h2><p class="muted">A view recebe a requisição encaminhada pelas URLs, consulta os models e prepara o contexto utilizado pelo template.</p><img class="diagram" src="fluxo_django_mtv.png" alt="Diagrama do fluxo: usuário, URL, view, model, banco de dados, template e resposta HTML"><p class="small muted">Diagrama introdutório. O processamento real também pode retornar JSON, PDF ou redirecionamentos.</p></section><h2>Seus módulos de estudo</h2><div class="grid3">${course.map(card).join("")}</div><section class="panel"><h2>Como estudar com este guia</h2><div class="grid3"><div><h3>01 · Compreenda</h3><p>Leia os conceitos e examine as relações entre os componentes.</p></div><div><h3>02 · Investigue</h3><p>Abra os arquivos indicados no VSCode e localize as implementações.</p></div><div><h3>03 · Pratique</h3><p>Conclua as atividades, responda às questões e registre suas descobertas.</p></div></div></section><div class="tip">Os encontros 4, 5 e 6 já aparecem no plano de curso, mas ainda não têm material de estudo completo nesta versão.</div>`;
+  return `<div class="hero"><span class="eyebrow">TRILHA DE APRENDIZAGEM · SUAP EDU</span><h1>Introdução ao Desenvolvimento SUAP</h1><p>Um guia de estudos com exemplos reais de código, exercícios práticos e explicações para consultar durante e depois das aulas.</p><button class="btn" data-page="m1">Começar pelo módulo 01 →</button></div><div class="stats"><div class="stat"><strong>12 h</strong><span>6 encontros · 2 h cada</span></div><div class="stat"><strong>04</strong><span>Módulos de estudo disponíveis</span></div><div class="stat"><strong>${course.reduce((n, m) => n + moduleDone(m), 0)}/${course.reduce((n, m) => n + moduleTotal(m), 0)}</strong><span>Atividades realizadas</span></div></div><section class="panel"><span class="tag">ENTENDA A ARQUITETURA</span><h2>Do endereço à página: o fluxo MTV</h2><p class="muted">A view recebe a requisição encaminhada pelas URLs, consulta os models e prepara o contexto utilizado pelo template.</p><img class="diagram" src="fluxo_django_mtv.png" alt="Diagrama do fluxo: usuário, URL, view, model, banco de dados, template e resposta HTML"><p class="small muted">Diagrama introdutório. O processamento real também pode retornar JSON, PDF ou redirecionamentos.</p></section><h2>Seus módulos de estudo</h2><div class="grid3">${course.map(card).join("")}</div><section class="panel"><h2>Como estudar com este guia</h2><div class="grid3"><div><h3>01 · Compreenda</h3><p>Leia os conceitos e examine as relações entre os componentes.</p></div><div><h3>02 · Investigue</h3><p>Abra os arquivos indicados no VSCode e localize as implementações.</p></div><div><h3>03 · Pratique</h3><p>Conclua as atividades, responda às questões e registre suas descobertas.</p></div></div></section><div class="tip">Os encontros 5 e 6 aparecem no plano de curso e serão incorporados nas próximas etapas.</div>`;
 }
 const row = (a, b) => `<tr><th>${a}</th><td>${b}</td></tr>`;
 function plan() {
@@ -1026,8 +1066,53 @@ function module3() {
     )
   );
 }
+function enhanceFormDiagrams() {
+  document.querySelectorAll(".forms-content .form-code.form-diagram").forEach((panel) => {
+    if (panel.classList.contains("visual-diagram")) return;
+    const code = panel.querySelector("code");
+    if (!code) return;
+    const raw = code.textContent.trim();
+    const lines = raw.split("\n").map((line) => line.trim()).filter(Boolean);
+    if (!lines.some((line) => /^(\||v|↓|→|->|<-)\s*$/.test(line) || /\s(→|->)\s/.test(line))) return;
+    const nodes = lines.filter((line) => !/^(\||v|↓|→|->|<-)\s*$/.test(line));
+    const source = panel.innerHTML;
+    panel.classList.add("visual-diagram");
+    panel.innerHTML = `<div class="visual-flow" role="img" aria-label="Diagrama do fluxo">${nodes.map((node, index) => `<div class="visual-flow-node">${escape(node)}</div>${index < nodes.length - 1 ? '<div class="visual-flow-arrow" aria-hidden="true">↓</div>' : ""}`).join("")}</div><details class="diagram-source"><summary>Ver representação textual</summary>${source}</details>`;
+  });
+}
+function module4() {
+  const content = (window.SUAP_FORMS_HTML || "").replace(/^<h1>[\s\S]*?<\/h1>\s*/, "");
+  const index = `<nav class="forms-index" aria-label="Índice de Forms e relatórios"><h2>Índice do conteúdo</h2><p>Use este índice para consultar os principais blocos da página.</p><div class="forms-index-grid"><a href="#forms-fundamentos"><strong>1.</strong> Fundamentos de Forms</a><a href="#forms-relacoes"><strong>2.</strong> Relação entre as camadas</a><a href="#forms-recursos"><strong>3.</strong> Recursos específicos do SUAP</a><a href="#forms-atividades"><strong>4.</strong> Atividades práticas</a><a href="#forms-revisao"><strong>5.</strong> Erros, testes e revisão</a><a href="#forms-referencias"><strong>6.</strong> Referências</a></div></nav>`;
+  return `<section class="panel"><span class="tag">ENCONTRO 04 · FORMS E RELATÓRIOS</span><h2>Do dado enviado ao relatório final</h2><p>Estude como o SUAP recebe dados, valida formulários, consulta models, edita registros e gera relatórios ou PDFs.</p><div class="tip"><strong>Como estudar:</strong> escolha um exemplo, siga o diagrama, copie o trecho de código e confira cada camada antes de executar qualquer alteração.</div></section>${index}<div class="forms-content">${content}</div>`;
+}
+function enhanceFormsIndex() {
+  const targets = [
+    ["D.", "forms-fundamentos"],
+    ["E.", "forms-relacoes"],
+    ["F.", "forms-relacoes"],
+    ["G.", "forms-relacoes"],
+    ["H.", "forms-recursos"],
+    ["I.", "forms-atividades"],
+    ["J.", "forms-revisao"],
+    ["K.", "forms-revisao"],
+    ["L.", "forms-revisao"],
+    ["M.", "forms-revisao"],
+    ["N.", "forms-referencias"],
+  ];
+  document.querySelectorAll(".forms-content h2").forEach((heading) => {
+    const target = targets.find(([prefix]) => heading.textContent.trim().startsWith(prefix));
+    if (target && !document.getElementById(target[1])) heading.id = target[1];
+  });
+  document.querySelectorAll(".forms-index a").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      const target = document.querySelector(link.getAttribute("href"));
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+}
 function modulePage(m) {
-  return `<div class="sectionhead"><span class="eyebrow">MÓDULO ${m.num} · ESTUDO GUIADO</span><h1>${m.name}</h1><p>${m.desc}</p><div class="bar"><div style="width:${modulePercent(m)}%"></div></div><span class="muted small">${moduleDone(m)}/${moduleTotal(m)} etapas concluídas</span></div><section class="panel"><h3>Ao terminar este módulo, você será capaz de:</h3><ul>${m.goals.map((g) => `<li>${g}</li>`).join("")}</ul></section>${m.id === "m1" ? module1() : m.id === "m2" ? module2() : module3()}${challengeArea(m.id)}${tasks(m)}${quiz(m)}${notesBlock(m.id)}<div class="panel"><h3>Continue seus estudos</h3><button class="btn" data-page="${m.id === "m1" ? "m2" : m.id === "m2" ? "m3" : "roadmap"}">${m.id === "m3" ? "Ver próximos encontros" : "Ir para o próximo módulo"} →</button></div>`;
+  return `<div class="sectionhead"><span class="eyebrow">MÓDULO ${m.num} · ESTUDO GUIADO</span><h1>${m.name}</h1><p>${m.desc}</p><div class="bar"><div style="width:${modulePercent(m)}%"></div></div><span class="muted small">${moduleDone(m)}/${moduleTotal(m)} etapas concluídas</span></div><section class="panel"><h3>Ao terminar este módulo, você será capaz de:</h3><ul>${m.goals.map((g) => `<li>${g}</li>`).join("")}</ul></section>${m.id === "m1" ? module1() : m.id === "m2" ? module2() : m.id === "m3" ? module3() : module4()}${challengeArea(m.id)}${tasks(m)}${quiz(m)}${notesBlock(m.id)}<div class="panel"><h3>Continue seus estudos</h3><button class="btn" data-page="${m.id === "m1" ? "m2" : m.id === "m2" ? "m3" : m.id === "m3" ? "m4" : "roadmap"}">${m.id === "m4" ? "Ver próximos encontros" : "Ir para o próximo módulo"} →</button></div>`;
 }
 const libraryItems = [
   ["model", "Model Turma: campos e managers"],
@@ -1054,7 +1139,7 @@ function progress() {
   return `<div class="sectionhead"><span class="eyebrow">ACOMPANHAMENTO</span><h1>Meu progresso</h1><p>Veja as atividades concluídas e retome os módulos que ainda deseja revisar.</p></div>${course.map((m) => `<section class="panel"><div class="codebar"><h3>${m.num} · ${m.name}</h3><strong>${modulePercent(m)}%</strong></div><div class="bar"><div style="width:${modulePercent(m)}%"></div></div><p class="muted">${moduleDone(m)} de ${moduleTotal(m)} atividades${moduleChallenges[m.id]?.length ? ` · ${challengeDone(m)} de ${moduleChallenges[m.id].length} chamados` : ""}</p><button class="btn secondary" data-page="${m.id}">Revisar módulo →</button></section>`).join("")}<div class="panel"><p>O progresso fica armazenado apenas neste dispositivo e navegador.</p><button class="btn ghost" id="reset">Reiniciar atividades, chamados e respostas</button></div>`;
 }
 function roadmap() {
-  return `<div class="sectionhead"><span class="eyebrow">TRILHA COMPLETA</span><h1>Próximos encontros</h1><p>O plano de curso prevê seis encontros de 2 horas, totalizando 12 horas. Os três módulos introdutórios já estão disponíveis; os materiais detalhados dos demais encontros serão incorporados posteriormente.</p></div><div class="panel"><span class="tag">ENCONTRO 04 · PLANEJADO</span><h2>Forms e relatórios do SUAP</h2><p>Formulários, validações, filtros e geração de relatórios.</p><p><strong>Caso principal:</strong> organização e validação de dados em telas do SUAP.</p></div><div class="panel"><span class="tag">ENCONTRO 05 · PLANEJADO</span><h2>Models do SUAP</h2><p>Relacionamentos, managers, consultas ORM e regras associadas aos dados.</p><p><strong>Caso principal:</strong> investigação de relações acadêmicas e consultas.</p></div><div class="panel"><span class="tag">ENCONTRO 06 · PLANEJADO</span><h2>Admin do SUAP</h2><p>Configuração e personalização da interface administrativa.</p><p><strong>Caso principal:</strong> listagens, filtros, ações e permissões no admin.</p></div><button class="btn" data-page="plan">Consultar plano de curso →</button>`;
+  return `<div class="sectionhead"><span class="eyebrow">TRILHA COMPLETA</span><h1>Próximos encontros</h1><p>O plano de curso prevê seis encontros de 2 horas, totalizando 12 horas. Os quatro primeiros encontros já estão disponíveis; os materiais detalhados dos encontros 5 e 6 serão incorporados posteriormente.</p></div><div class="panel"><span class="tag">ENCONTRO 04 · DISPONÍVEL</span><h2>Forms e relatórios do SUAP</h2><p>Formulários, validações, filtros e geração de relatórios.</p><p><strong>Caso principal:</strong> organização e validação de dados em telas do SUAP.</p></div><div class="panel"><span class="tag">ENCONTRO 05 · PLANEJADO</span><h2>Models do SUAP</h2><p>Relacionamentos, managers, consultas ORM e regras associadas aos dados.</p><p><strong>Caso principal:</strong> investigação de relações acadêmicas e consultas.</p></div><div class="panel"><span class="tag">ENCONTRO 06 · PLANEJADO</span><h2>Admin do SUAP</h2><p>Configuração e personalização da interface administrativa.</p><p><strong>Caso principal:</strong> listagens, filtros, ações e permissões no admin.</p></div><button class="btn" data-page="plan">Consultar plano de curso →</button>`;
 }
 function searchPage(q) {
   let entries = [
@@ -1133,6 +1218,8 @@ function render() {
                   : m
                     ? modulePage(m)
                     : home();
+  enhanceFormDiagrams();
+  enhanceFormsIndex();
   document.querySelectorAll("[data-page]").forEach((b) => {
     b.onclick = () => navigate(b.dataset.page);
     b.classList.toggle("active", b.dataset.page === current);
@@ -1213,6 +1300,30 @@ function render() {
         let el = $("#code-" + b.dataset.toggle);
         el.classList.toggle("no-comments");
         b.textContent = el.classList.contains("no-comments")
+          ? "Mostrar comentários"
+          : "Ocultar comentários";
+      }),
+  );
+  document.querySelectorAll("[data-form-copy]").forEach(
+    (b) =>
+      (b.onclick = async () => {
+        const codeEl = b.closest(".form-code")?.querySelector("code");
+        if (!codeEl) return;
+        try {
+          await navigator.clipboard.writeText(codeEl.textContent);
+          b.textContent = "Copiado ✓";
+        } catch {
+          b.textContent = "Selecione e copie o trecho";
+        }
+      }),
+  );
+  document.querySelectorAll("[data-form-toggle]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const panel = b.closest(".form-code");
+        if (!panel) return;
+        panel.classList.toggle("no-comments");
+        b.textContent = panel.classList.contains("no-comments")
           ? "Mostrar comentários"
           : "Ocultar comentários";
       }),

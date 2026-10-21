@@ -1,7 +1,7 @@
 # Requisitos — Portal SUAP EDU: Guia do SUAP
 
 **Versão do documento:** 1.1  
-**Estado do projeto:** protótipo funcional com três encontros com material disponível; três encontros planejados  
+**Estado do projeto:** protótipo funcional com seis encontros com material disponível
 **Objetivo:** orientar a continuidade do desenvolvimento no Codex/VSCode, preservando o portal existente.
 
 ## 1. Contexto
@@ -37,7 +37,7 @@ Legenda: **[E] existente**, **[M] melhorar/validar**, **[P] planejado**.
 | RF-02 | Exibir o diagrama Django MTV com texto alternativo e fluxo correto entre URL, view, model, banco e template. | E/M | Alta |
 | RF-03 | Disponibilizar o plano de curso com justificativa, público, objetivos, metodologia, avaliação, tecnologias, cronograma e referências. | E/M | Alta |
 | RF-04 | Navegar entre módulos de estudo e seções de apoio por menu lateral responsivo. | E/M | Alta |
-| RF-05 | Apresentar os três módulos: introdução ao fluxo do SUAP; decoradores do SUAP; permissões do SUAP. | E/M | Alta |
+| RF-05 | Apresentar os seis módulos: Introdução, Decoradores, Permissões, Forms e relatórios, Models e Admin do SUAP. | E/M | Alta |
 | RF-06 | Em cada módulo, apresentar objetivos, conceitos, exemplos de código, tarefas e questões com explicação das respostas. | E/M | Alta |
 | RF-07 | Disponibilizar biblioteca pesquisável de trechos reais do SUAP com caminho do arquivo e referência de origem. | E/M | Alta |
 | RF-08 | Apresentar a view `turma()` comentada, o model `Turma` e exemplos de `response.py`. | E/M | Alta |
@@ -46,9 +46,9 @@ Legenda: **[E] existente**, **[M] melhorar/validar**, **[P] planejado**.
 | RF-11 | Exibir questões de revisão com feedback formativo imediato. | E/M | Alta |
 | RF-12 | Permitir escrever anotações pessoais e exportá-las em Markdown. | E/M | Alta |
 | RF-13 | Permitir alternar tema claro/escuro, pesquisar conteúdo e imprimir páginas. | E/M | Média |
-| RF-14 | Identificar encontros 4, 5 e 6 como planejados, sem apresentar conteúdo inexistente como concluído. | E | Alta |
-| RF-15 | Relacionar os materiais disponíveis aos encontros 1, 2 e 3 e oferecer links para os encontros planejados 4, 5 e 6. | E/M | Alta |
-| RF-16 | Acrescentar conteúdos completos de forms e relatórios (encontro 4), models (encontro 5) e admin (encontro 6), com investigação, implementação e validação integradas às atividades. | P | Alta |
+| RF-14 | Identificar os seis encontros como disponíveis e apresentar o conteúdo correspondente na trilha. | E | Alta |
+| RF-15 | Relacionar cada material ao encontro correspondente e permitir acesso pelo menu e pela trilha. | E | Alta |
+| RF-16 | Manter conteúdos completos de Forms, Models e Admin, com investigação, implementação e validação integradas às atividades. | E | Alta |
 | RF-17 | Oferecer visualização de código original versus código comentado, preservando formatação e numeração opcional. | P | Média |
 | RF-18 | Oferecer glossário de termos Django/SUAP e índice de arquivos/funcionalidades. | P | Média |
 | RF-19 | Permitir exportar e importar progresso/anotações em formato portável, sem depender de servidor. | P | Baixa |
@@ -101,7 +101,7 @@ Indicar claramente que exemplos de escrita no banco, remoção de matrículas, g
 | 5 | Models do SUAP | Turma, relacionamentos, managers e métodos de negócio | A/B — Exploração e diagnóstico |
 | 6 | Admin do SUAP | Listagens, filtros, buscas, ações e permissões administrativas | A/C — Exploração e implementação |
 
-**Regra de organização:** os materiais existentes correspondem aos encontros 1 (Introdução ao fluxo do SUAP), 2 (Decoradores do SUAP) e 3 (Permissões do SUAP). Os encontros 4 (Forms e relatórios do SUAP), 5 (Models do SUAP) e 6 (Admin do SUAP) têm links próprios e permanecem planejados até a validação do conteúdo completo.
+**Regra de organização:** os materiais dos encontros 1 a 6 possuem links próprios, conteúdos correspondentes e acesso pelo menu principal.
 
 ## 6. Casos e códigos obrigatórios
 
@@ -177,7 +177,7 @@ Acessar todas as seções pelo menu e voltar à página inicial sem erros no con
 
 ### TA-03 — Conteúdo
 
-Conferir que os três módulos e o plano de seis encontros estão disponíveis; encontros 4, 5 e 6 devem estar identificados como planejados.
+Conferir que os seis módulos e o plano de seis encontros estão disponíveis; cada encontro deve abrir seu conteúdo correspondente.
 
 ### TA-04 — Código
 
@@ -227,13 +227,11 @@ Confirmar que o portal não executa operações do SUAP, não faz requisições 
 3. Padronizar objetivos, exemplos, atividades e questões.
 4. Melhorar a biblioteca de códigos comentados e a busca.
 
-### Ciclo 3 — Conclusão da trilha
+### Ciclo 3 - Conclusão da trilha
 
-1. Desenvolver conteúdo do encontro 4: forms, validações, filtros e relatórios.
-2. Desenvolver conteúdo do encontro 5: models, relacionamentos, managers e ORM.
-3. Desenvolver conteúdo do encontro 6: configuração e personalizações do admin.
-4. Acrescentar exercícios baseados em evidências, testes de regressão e documentação de resultados.
-5. Validar todo o curso contra o plano de 12 horas.
+1. Consolidar e revisar os conteúdos dos encontros 4, 5 e 6.
+2. Acrescentar exercícios baseados em evidências, testes de regressão e documentação de resultados.
+3. Validar todo o curso contra o plano de 12 horas.
 
 ### Ciclo 4 — Publicação e manutenção
 
@@ -256,4 +254,4 @@ Confirmar que o portal não executa operações do SUAP, não faz requisições 
 
 ## 13. Definição de pronto
 
-Uma versão está pronta para distribuição quando os módulos existentes estiverem corretos, os links e exemplos funcionarem offline, as tarefas/questões/anotações operarem de forma confiável, o conteúdo tiver linguagem apropriada ao participante, as referências técnicas forem rastreáveis e o cronograma distinguir claramente conteúdos disponíveis dos planejados. A **conclusão integral do projeto** também exige conteúdo validado para os encontros 4, 5 e 6.
+Uma versão está pronta para distribuição quando os seis módulos estiverem corretos, os links e exemplos funcionarem offline, as tarefas, questões e anotações operarem de forma confiável, o conteúdo tiver linguagem apropriada ao participante e as referências técnicas forem rastreáveis.

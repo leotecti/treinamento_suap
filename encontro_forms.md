@@ -570,65 +570,572 @@ forms.FormPlus   # djtools.forms.FormPlus
 
 #### 3.1. O que é `Form`
 
-`Form` é a classe do Django usada quando a tela precisa receber e validar dados, mas não está ligada automaticamente a um único model. Ela é adequada para filtros, pesquisas, confirmações, uploads e outras entradas que podem gerar uma consulta, um arquivo ou uma ação.
+`django.forms.Form` e a classe nativa para receber, converter, validar e
+apresentar um conjunto de dados que o desenvolvedor declara explicitamente.
+Ela nao depende de um model nem representa necessariamente uma tabela.
 
-A classe define os campos que o usuário verá e as regras que esses valores devem seguir:
+O exemplo desta seção pertence ao EDU, usa turmas e diários já existentes e
+pode ser acessado pela própria tela de uma turma. Ele é um bom ponto de partida
+porque não edita um registro nem possui `save()`: recebe opções, valida os
+dados e gera estatísticas.
+
+**Form real:** `edu/forms.py:13693-13703`
 
 ```python
-class FiltroAlunoForm(forms.Form):
-    matricula = forms.CharField(
-        label='Matrícula',
+class EstatisticaTurmaForm(forms.Form):
+    SUBMIT_LABEL = 'Exibir Estatística'
+
+    etapas = forms.MultipleChoiceField(
+        choices=[
+            [1, '1ª Etapa'],
+            [2, '2ª Etapa'],
+            [3, '3ª Etapa'],
+            [4, '4ª Etapa'],
+            [5, 'Final'],
+        ],
+        label='',
+        widget=forms.CheckboxSelectMultiplePlus(),
+    )
+
+    diarios = forms.MultipleModelChoiceField(
+        Diario.objects.none(),
+        label='',
+        widget=forms.CheckboxSelectMultiplePlus(),
+    )
+
+    abreviar = forms.BooleanField(
+        label='Abreviar',
+        help_text='Exibir a sigla do componente ao invés da descrição completa do diário.',
         required=False,
     )
-    somente_ativos = forms.BooleanField(
-        label='Somente alunos ativos',
-        required=False,
+
+    fieldsets = (
+        ('Etapas', {'fields': ('etapas',)}),
+        ('Diários', {'fields': ('diarios',)}),
+        ('Exibição', {'fields': ('abreviar',)}),
     )
 ```
 
-Nesse exemplo, o formulário tem dois campos independentes de uma tabela específica:
+O form possui três campos:
 
-- `matricula` recebe um texto e pode ficar vazio;
-- `somente_ativos` recebe uma opção de marcação e também é opcional.
+- `etapas`: permite selecionar uma ou mais etapas;
+- `diarios`: permite selecionar um ou mais diários da turma;
+- `abreviar`: representa uma opção booleana de exibição.
 
-A view pode criar esse formulário vazio no primeiro acesso e preenchê-lo com os parâmetros da URL quando o usuário fizer uma consulta:
+Esse exemplo permite observar, em uma única classe, `MultipleChoiceField`,
+`MultipleModelChoiceField`, `BooleanField`, widgets, `fieldsets` e o uso de
+`cleaned_data` depois da validação.
+
+### Como o form chega à tela
+
+Para abrir a funcionalidade, acesse `/admin/edu/turma/`, escolha uma turma
+regular que possua matriz e diários e clique em **Estatística da Turma** na
+tela da turma. O acesso direto também é possível:
+
+```text
+/edu/turma_estatistica/<pk_da_turma>/
+```
+
+A rota está em `edu/urls.py:28`:
 
 ```python
-form = FiltroAlunoForm(data=request.GET or None)
+path(
+    'turma_estatistica/<str:turma_pk>/',
+    views.turma_estatistica,
+)
+```
 
+A view está em `edu/views.py:13166-13186`:
+
+```python
+@rtr()
+@login_required()
+def turma_estatistica(request, turma_pk):
+    turma = get_object_or_404(Turma, pk=turma_pk)
+    title = f'Estatística da Turma {turma.codigo}'
+
+    form = EstatisticaTurmaForm(data=request.POST or None)
+
+    # O campo começa vazio e recebe os diários da turma.
+    form.fields['diarios'].queryset = turma.diario_set.all()
+
+    if form.is_valid():
+        etapas = form.cleaned_data['etapas']
+        diarios = form.cleaned_data['diarios']
+        abreviar = form.cleaned_data['abreviar']
+
+        # Geração das estatísticas e dos gráficos.
+
+    return locals()
+```
+
+O template `edu/templates/turma_estatistica.html:11-16` renderiza o form e só
+exibe os gráficos depois que existem etapas selecionadas:
+
+```django
+{% block content %}
+    {% render_form form %}
+
+    {% if etapas %}
+        ...
+    {% endif %}
+{% endblock %}
+```
+
+### Como testar
+
+1. Abra `/admin/edu/turma/`.
+2. Escolha uma turma com matriz e diários.
+3. Clique em **Estatística da Turma**.
+4. Selecione uma etapa e um ou mais diários.
+5. Clique em **Exibir Estatística**.
+
+A tela deverá gerar os gráficos com os dados da turma. Mesmo sem notas
+registradas, o formulário e o fluxo completo podem ser observados.
+
+##### 3.1.1. Exemplo real: Estatistica da Turma
+
+O primeiro exemplo é o `EstatisticaTurmaForm`. Ele foi escolhido porque:
+
+- pertence ao modulo EDU;
+- herda diretamente de `forms.Form`;
+- possui poucos campos e nao esta ligado automaticamente a um model;
+- usa turmas e diarios, dados centrais do modulo;
+- pode ser aberto a partir da propria tela de uma turma;
+- apenas consulta dados e gera graficos, sem salvar alteracoes no banco.
+
+O fluxo que sera acompanhado e:
+
+```text
+Tela da turma
+    |
+    v
+Botao Estatistica da Turma
+    |
+    v
+URL /edu/turma_estatistica/<turma_pk>/
+    |
+    v
+View turma_estatistica
+    |
+    v
+EstatisticaTurmaForm
+    |
+    v
+Template turma_estatistica.html
+    |
+    v
+Graficos calculados com os diarios selecionados
+```
+
+###### Etapa 1 - Abrir uma turma com dados
+
+O ponto de partida é a listagem administrativa de turmas:
+
+```text
+/admin/edu/turma/
+```
+
+Escolha uma turma regular que possua:
+
+- matriz vinculada;
+- pelo menos um diario;
+- alunos matriculados nos diarios;
+- preferencialmente notas registradas, para tornar os graficos mais visiveis.
+
+Ao abrir a turma, o endereco tera este formato:
+
+```text
+/edu/turma/<pk>/
+```
+
+Na parte superior da tela existe o botao **Estatistica da Turma**. Ele e
+declarado em `edu/templates/turma.html:8-15`:
+
+```django
+<ul class="action-bar">
+    <li>
+        <a class="btn default"
+           href="/edu/turma_estatistica/{{ obj.pk }}/">
+            Estatistica da Turma
+        </a>
+    </li>
+</ul>
+```
+
+O template usa `obj.pk` para incluir a chave primaria da turma no endereco.
+Por exemplo, para uma turma de chave `120`, o link produzido sera:
+
+```text
+/edu/turma_estatistica/120/
+```
+
+###### Etapa 2 - Identificar a URL
+
+A rota da tela esta em `edu/urls.py:28`:
+
+```python
+path(
+    'turma_estatistica/<str:turma_pk>/',
+    views.turma_estatistica,
+)
+```
+
+Leitura da rota:
+
+| Trecho | Funcao |
+|---|---|
+| `turma_estatistica/` | Parte fixa do endereco |
+| `<str:turma_pk>` | Captura a identificacao da turma como string |
+| `views.turma_estatistica` | Funcao executada quando a URL e acessada |
+
+O prefixo `/edu/` e acrescentado pelo carregamento das URLs do modulo. Portanto,
+o endereco completo e:
+
+```text
+/edu/turma_estatistica/<turma_pk>/
+```
+
+###### Etapa 3 - Abrir o form
+
+**Arquivo:** `edu/forms.py`  
+**Linhas:** `13693-13703`
+
+```python
+class EstatisticaTurmaForm(forms.Form):
+
+    SUBMIT_LABEL = 'Exibir Estatistica'
+
+    etapas = forms.MultipleChoiceField(
+        choices=[
+            [1, '1a Etapa'],
+            [2, '2a Etapa'],
+            [3, '3a Etapa'],
+            [4, '4a Etapa'],
+            [5, 'Final'],
+        ],
+        label='',
+        widget=forms.CheckboxSelectMultiplePlus(),
+    )
+
+    diarios = forms.MultipleModelChoiceField(
+        Diario.objects.none(),
+        label='',
+        widget=forms.CheckboxSelectMultiplePlus(),
+    )
+
+    abreviar = forms.BooleanField(
+        label='Abreviar',
+        help_text=(
+            'Exibir "sigla" do componente ao inves da descricao '
+            'completa do diario.'
+        ),
+        required=False,
+    )
+
+    fieldsets = (
+        ('Etapas', {'fields': ('etapas',)}),
+        ('Diarios', {'fields': ('diarios',)}),
+        ('Exibicao', {'fields': ('abreviar',)}),
+    )
+```
+
+O trecho foi reorganizado em varias linhas para facilitar a leitura, mas
+preserva o comportamento encontrado no codigo.
+
+###### Etapa 4 - Entender a classe-base
+
+```python
+class EstatisticaTurmaForm(forms.Form):
+```
+
+`forms.Form` e a classe nativa do Django reexportada por `djtools.forms`. Isso
+significa que:
+
+- os campos precisam ser declarados explicitamente;
+- o formulario nao esta vinculado automaticamente ao model `Turma`;
+- ele nao recebe `instance`;
+- ele nao possui `save()` para gravar um model;
+- depois da validacao, os valores ficam em `cleaned_data`;
+- a view decide como utilizar os valores selecionados.
+
+O objetivo desse form nao e editar a turma. Ele apenas recebe as opcoes usadas
+para calcular uma estatistica.
+
+###### Etapa 5 - Entender os tres campos
+
+| Campo | Classe | Origem | Resultado validado |
+|---|---|---|---|
+| `etapas` | `MultipleChoiceField` | Django | Lista das etapas selecionadas |
+| `diarios` | `MultipleModelChoiceField` | Django | `QuerySet` com os diarios selecionados |
+| `abreviar` | `BooleanField` | Django | `True` ou `False` |
+
+**Campo `etapas`**
+
+```python
+etapas = forms.MultipleChoiceField(
+    choices=[
+        [1, '1a Etapa'],
+        [2, '2a Etapa'],
+        [3, '3a Etapa'],
+        [4, '4a Etapa'],
+        [5, 'Final'],
+    ],
+    label='',
+    widget=forms.CheckboxSelectMultiplePlus(),
+)
+```
+
+`MultipleChoiceField` permite selecionar varias opcoes. Cada item de `choices`
+possui o formato:
+
+```python
+[valor_enviado, texto_apresentado]
+```
+
+O widget `CheckboxSelectMultiplePlus` pertence ao DJTools e apresenta as opcoes
+como caixas de selecao seguindo a interface do SUAP.
+
+**Campo `diarios`**
+
+```python
+diarios = forms.MultipleModelChoiceField(
+    Diario.objects.none(),
+    label='',
+    widget=forms.CheckboxSelectMultiplePlus(),
+)
+```
+
+`MultipleModelChoiceField` recebe chaves de registros e, durante a validacao,
+transforma a selecao em objetos `Diario`.
+
+O queryset inicial e `Diario.objects.none()`, ou seja, comeca vazio. Essa e uma
+medida importante: o form nao deve listar todos os diarios do sistema. A view
+substitui esse queryset apenas pelos diarios da turma acessada.
+
+**Campo `abreviar`**
+
+```python
+abreviar = forms.BooleanField(
+    label='Abreviar',
+    required=False,
+)
+```
+
+Esse campo controla somente a apresentacao dos nomes dos componentes nos
+graficos:
+
+- marcado: utiliza a sigla;
+- desmarcado: utiliza sigla e descricao;
+- `required=False`: o formulario continua valido quando ele nao e marcado.
+
+###### Etapa 6 - Entender as customizacoes visuais
+
+```python
+SUBMIT_LABEL = 'Exibir Estatistica'
+```
+
+`SUBMIT_LABEL` nao pertence ao `Form` nativo. A camada de renderizacao do SUAP
+usa esse atributo como texto do botao de submissao.
+
+```python
+fieldsets = (
+    ('Etapas', {'fields': ('etapas',)}),
+    ('Diarios', {'fields': ('diarios',)}),
+    ('Exibicao', {'fields': ('abreviar',)}),
+)
+```
+
+`fieldsets` tambem e uma convencao utilizada pelo DJTools. Ele organiza os tres
+campos em grupos visuais, mas nao altera sua validacao.
+
+Esse exemplo mostra que uma classe pode herdar do `Form` nativo e, ao mesmo
+tempo, usar widgets e convencoes visuais do SUAP:
+
+```text
+Classe-base                 -> Django Form
+Campos                      -> Django
+CheckboxSelectMultiplePlus  -> DJTools
+SUBMIT_LABEL e fieldsets    -> convencoes do SUAP/DJTools
+```
+
+###### Etapa 7 - Ler a view
+
+**Arquivo:** `edu/views.py`  
+**Inicio da view:** `13166`
+
+O trecho inicial, responsavel pelo formulario, esta em
+`edu/views.py:13166-13186`:
+
+```python
+@rtr()
+@login_required()
+def turma_estatistica(request, turma_pk):
+    turma = get_object_or_404(Turma, pk=turma_pk)
+    title = f'Estatistica da Turma {turma.codigo}'
+
+    media = turma.matriz.estrutura.media_aprovacao_sem_prova_final
+    media_final = (
+        50
+        if turma.pertence_ao_plano_retomada
+        else turma.matriz.estrutura.media_aprovacao_avaliacao_final
+    )
+
+    # Dicionarios utilizados posteriormente na geracao dos graficos.
+    etapa_acima = {1: [], 2: [], 3: [], 4: [], 5: []}
+    etapa_abaixo = {1: [], 2: [], 3: [], 4: [], 5: []}
+
+    form = EstatisticaTurmaForm(data=request.POST or None)
+
+    form.fields['diarios'].queryset = turma.diario_set.all()
+
+    if form.is_valid():
+        etapas = form.cleaned_data['etapas']
+        diarios = form.cleaned_data['diarios']
+        abreviar = form.cleaned_data['abreviar']
+
+        # A view calcula os dados dos graficos para cada diario.
+        for diario in diarios:
+            ...
+
+    return locals()
+```
+
+O exemplo acima e uma versao reduzida e comentada da view. O processamento
+completo dos graficos continua nas linhas seguintes de `edu/views.py`.
+
+###### Etapa 8 - Compreender a view linha a linha
+
+```python
+@rtr()
+```
+
+Renderiza automaticamente `turma_estatistica.html`, pois a view devolve
+`locals()`.
+
+```python
+@login_required()
+```
+
+Exige um usuario autenticado. A view nao pode ser acessada anonimamente.
+
+```python
+def turma_estatistica(request, turma_pk):
+```
+
+Recebe o `request` e o valor capturado por `<str:turma_pk>` na URL.
+
+```python
+turma = get_object_or_404(Turma, pk=turma_pk)
+```
+
+Busca a turma. Se a chave nao existir, o Django devolve a resposta 404.
+
+```python
+form = EstatisticaTurmaForm(data=request.POST or None)
+```
+
+Cria o formulario em dois estados:
+
+- primeiro acesso por GET: `request.POST` esta vazio, `data=None` e o form fica
+  `unbound`;
+- envio do formulario por POST: o form recebe os dados e fica `bound`.
+
+```python
+form.fields['diarios'].queryset = turma.diario_set.all()
+```
+
+Substitui o queryset vazio declarado no form pelos diarios pertencentes aquela
+turma. Essa linha precisa ser executada antes de `is_valid()`, pois o Django
+somente aceita escolhas presentes no queryset do campo.
+
+```python
 if form.is_valid():
-    matricula = form.cleaned_data['matricula']
-    somente_ativos = form.cleaned_data['somente_ativos']
-    alunos = buscar_alunos(matricula, somente_ativos)
 ```
 
-O ciclo de um `Form` é:
-
-1. receber dados em `data` ou arquivos em `files`;
-2. converter cada entrada para o tipo Python correspondente;
-3. executar validadores e métodos `clean_<campo>()`;
-4. aplicar regras que dependem de vários campos em `clean()`;
-5. disponibilizar os valores aprovados em `cleaned_data`;
-6. informar problemas de preenchimento em `errors`.
-
-`cleaned_data` só deve ser acessado depois de `is_valid()`. Antes disso, os valores ainda não foram convertidos nem validados.
-
-`Form` não grava dados automaticamente. Se o resultado precisar salvar um model, gerar um arquivo, enviar um e-mail ou executar outra ação, a view ou um método criado pelo projeto deve fazer isso explicitamente após a validação.
-
-Um formulário também pode receber argumentos adicionais no construtor. No SUAP, isso permite restringir escolhas ao usuário ou ao contexto atual:
+Converte e valida os tres campos. Como o formulario nao e um `ModelForm`, essa
+validacao nao cria nem altera objetos automaticamente.
 
 ```python
-class FiltroTurmaForm(forms.Form):
-    turma = forms.ModelChoiceField(Turma.objects.none())
-
-    def __init__(self, campus, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['turma'].queryset = Turma.objects.filter(
-            curso_campus__campus=campus,
-        )
+etapas = form.cleaned_data['etapas']
+diarios = form.cleaned_data['diarios']
+abreviar = form.cleaned_data['abreviar']
 ```
 
-A classe continua sendo um `Form` comum: o argumento `campus` apenas permite preparar o campo de acordo com o contexto recebido.
+Le os valores convertidos e validados. A view usa esses dados para calcular as
+estatisticas e preparar os graficos.
+
+###### Etapa 9 - Abrir o template
+
+**Arquivo:** `edu/templates/turma_estatistica.html`  
+**Linhas iniciais:** `1-16`
+
+```django
+{% extends super_template %}
+
+{% block extrahead %}
+    <script src="/static/djtools/graficos/highcharts.js"></script>
+    <script src="/static/djtools/graficos/exporting.js"></script>
+{% endblock %}
+
+{% block content %}
+    {% render_form form %}
+
+    {% if etapas %}
+        <div id="containeralunos"></div>
+        <div id="containermedia"></div>
+        {# Configuracao dos graficos... #}
+    {% endif %}
+{% endblock %}
+```
+
+Leitura do template:
+
+- `{% extends super_template %}` herda a estrutura visual do SUAP;
+- `extrahead` carrega a biblioteca usada nos graficos;
+- `{% render_form form %}` apresenta os campos conforme `fieldsets`;
+- `{% if etapas %}` impede a exibicao dos graficos antes da submissao valida;
+- os dados preparados pela view alimentam os graficos nas linhas seguintes.
+
+###### Etapa 10 - Testar o fluxo
+
+1. Abra `/admin/edu/turma/`.
+2. Escolha uma turma com matriz e diarios.
+3. Na tela `/edu/turma/<pk>/`, clique em **Estatistica da Turma**.
+4. Confira os grupos `Etapas`, `Diarios` e `Exibicao`.
+5. Selecione pelo menos uma etapa.
+6. Selecione pelo menos um diario.
+7. Marque e desmarque `Abreviar` para comparar os rotulos.
+8. Clique em **Exibir Estatistica**.
+9. Confira que a pagina continua na mesma URL e apresenta os graficos.
+10. Retorne ao codigo e relacione cada escolha com `cleaned_data`.
+
+Se os graficos aparecerem sem valores relevantes, escolha uma turma que possua
+notas lancadas. Isso nao impede o acompanhamento do form, mas torna o resultado
+visual mais claro.
+
+###### Sintese do exemplo
+
+```text
+O form declara e valida as opcoes.
+A view escolhe os diarios permitidos e calcula os dados.
+O template renderiza o form e apresenta os graficos.
+Nenhum registro e salvo pelo formulario.
+```
+
+Cada atributo que e uma instancia de `Field` transforma-se em um campo do
+formulario. Ao receber dados, o form:
+
+1. guarda os valores enviados em `data` e `files`;
+2. converte cada entrada para o tipo Python adequado;
+3. executa validadores e metodos `clean_<campo>()`;
+4. executa `clean()` para validacoes entre campos;
+5. disponibiliza valores validos em `cleaned_data`;
+6. disponibiliza falhas em `errors`.
+
+`Form` nao implementa persistencia automatica. Se os dados precisarem gerar
+uma consulta, arquivo, e-mail ou gravacao, o codigo deve executar essa acao
+explicitamente depois de `is_valid()`.
 
 #### 3.2. Exemplo real de `Form` no EDU
 
@@ -702,48 +1209,672 @@ Leitura do exemplo:
 - o campo `ModelChoiceFieldPlus` pode ser usado em um `Form` comum. Campo
   `Plus` e classe `FormPlus` são recursos independentes.
 
-#### 3.3. O que é `FormPlus`
+OUTRO EXEMPLO
+#### 3.4. O que ? `FormPlus`
 
-`FormPlus` e a especialização do DJTools para Formulários comuns do SUAP. Sua
-implementação completa está em `djtools/forms/__init__.py:54-62`:
+`FormPlus` e a especializacao criada pelo **DJTools/SUAP** para formularios
+comuns do Django. Ele nao pertence ao Django. Sua classe-base continua sendo
+`django.forms.Form`, portanto ele preserva todo o ciclo normal de declaracao de
+campos, estado bound/unbound, conversao, validacao e `cleaned_data`.
 
-A seguir, a implementação comentada explica cada parte do código.
+Sua composicao pode ser resumida assim:
 
-A classe acrescenta duas coisas ao `Form`:
+```text
+django.forms.Form
+        +
+request opcional em self.request
+        +
+MetaFormPlus para customizacao por LPS
+        =
+djtools.forms.FormPlus
+```
 
-1. aceita o argumento nomeado `request` e o armazena em `self.request`;
-2. usa `MetaFormPlus`, que permite customizacoes por LPS.
+O `FormPlus` e indicado quando o formulario nao representa diretamente um
+model, mas precisa participar das convencoes do SUAP e, principalmente, quando
+precisa conhecer a requisicao atual. Com `self.request`, o form pode consultar
+o usuario autenticado, suas permissoes, a sessao ou outros dados da requisicao.
 
-Todo o restante continua vindo do Django: estado bound/unbound, `fields`,
-`data`, `files`, `initial`, `prefix`, conversao, validação, `cleaned_data`,
-`errors`, `is_valid()` e renderizacao.
+Ele **nao ganha `save()` automaticamente**. Assim como `forms.Form`, um
+`FormPlus` somente tera `save()` se o proprio desenvolvedor implementar esse
+metodo. Para formularios ligados automaticamente a um model, a classe adequada
+e `ModelFormPlus`, estudada na proxima secao.
 
-#### 3.4. Implementação comentada do `FormPlus`
+##### 3.4.1. Onde o `FormPlus` e implementado
+
+**Arquivo:** `djtools/forms/__init__.py`  
+**Linhas:** `54-62`
+
+Esta e a implementacao completa da classe:
 
 ```python
-# Herda o formulario comum do Django.
-# A metaclasse do DJTools preserva a coleta declarativa dos campos e
-# acrescenta a possibilidade de customizacao por LPS.
 class FormPlus(forms.Form, metaclass=MetaFormPlus):
+    """
+    Torna o ``request`` disponível no ``FormPlus`` através de
+    ``self.request`` quando passado como parêmetro no inicialização.
+    """
 
     def __init__(self, *args, **kwargs):
-        # request nao pertence a assinatura de django.forms.Form.
         if 'request' in kwargs:
-            # Remove o argumento antes de chamar o Django e o guarda
-            # na instancia atual do formulario.
             self.request = kwargs.pop('request')
-
-        # Inicializa todo o ciclo normal de Form/BaseForm.
         super().__init__(*args, **kwargs)
 ```
 
-O `pop()` e indispensavel: se `request` permanecesse em `kwargs`, o construtor
-de `BaseForm` o rejeitaria. A chamada a `super()` também e indispensavel, pois
-e ela que prepara os campos e o estado do formulário.
+Embora a classe tenha poucas linhas, ela combina o comportamento do Django com
+dois pontos de extensao do SUAP. A mesma implementacao, agora comentada:
 
-Atenção: se a view não passar `request`, essa implementação não cria
+```python
+# Continua sendo um Form do Django. MetaFormPlus substitui a metaclasse
+# padrao para acrescentar a possibilidade de customizacao por LPS.
+class FormPlus(forms.Form, metaclass=MetaFormPlus):
+
+    def __init__(self, *args, **kwargs):
+        # request nao e aceito pelo construtor de django.forms.Form.
+        if 'request' in kwargs:
+            # pop() remove o argumento de kwargs e guarda a requisicao
+            # na instancia atual do formulario.
+            self.request = kwargs.pop('request')
+
+        # O Django recebe somente os argumentos que conhece, como
+        # data, files, initial e prefix.
+        super().__init__(*args, **kwargs)
+```
+
+Passo a passo de uma instanciacao:
+
+```python
+form = MeuFiltroForm(
+    data=request.GET or None,
+    request=request,
+)
+```
+
+```text
+1. request chega dentro de kwargs
+2. FormPlus remove request com pop()
+3. a requisicao fica disponivel em self.request
+4. super().__init__() entrega data ao Form do Django
+5. o Django configura campos, initial e estado bound/unbound
+```
+
+O `pop()` e necessario porque o construtor do `Form` do Django nao possui um
+parametro chamado `request`. Se esse valor fosse repassado ao Django, seria
+gerado um `TypeError`. A chamada a `super()` tambem e indispensavel, pois e ela
+que prepara os campos e o ciclo de validacao.
+
+Atencao: se a view nao passar `request`, essa implementacao nao cria
 `self.request`. Um form que acessa esse atributo deve ser sempre instanciado com
 `request=request` ou tratar sua ausencia com `getattr()`/`hasattr()`.
+
+##### 3.4.2. O que continua vindo do Django
+
+O `FormPlus` herda de `forms.Form` os principais recursos usados no dia a dia:
+
+| Recurso | Origem | Funcao |
+|---|---|---|
+| `fields` | Django | Dicionario com os campos da instancia do form |
+| `data` e `files` | Django | Dados brutos recebidos da requisicao |
+| `initial` | Django | Valores iniciais apresentados na tela |
+| `is_bound` | Django | Informa se o form recebeu dados |
+| `is_valid()` | Django | Dispara conversao e validacao e informa o resultado |
+| `errors` | Django | Armazena os erros encontrados |
+| `cleaned_data` | Django | Armazena os valores convertidos e validados |
+| `clean_<campo>()` | Django | Ponto de validacao de um campo especifico |
+| `clean()` | Django | Ponto de validacao conjunta dos campos |
+| `self.request` | DJTools/SUAP | Disponibiliza a requisicao, se ela for passada pela view |
+| `MetaFormPlus` | DJTools/SUAP | Permite sobreposicao da classe por LPS |
+
+Por isso, a validacao de um `FormPlus` segue exatamente a ordem estudada para
+`Form`:
+
+```text
+valor bruto
+-> to_python()
+-> validate()
+-> run_validators()
+-> clean_<campo>()
+-> clean()
+-> cleaned_data ou errors
+```
+
+##### 3.4.3. Como funciona `MetaFormPlus`
+
+`MetaFormPlus` esta em `djtools/lps.py:67-86` e herda da propria
+`DeclarativeFieldsMetaclass` do Django. Quando `settings.LPS` esta configurado,
+ela procura uma classe de mesmo nome em:
+
+```text
+<aplicativo>/lps/<LPS_ATIVA>/forms.py
+```
+
+Se encontrar, copia seus atributos para a classe criada. A verificacao da LPS
+ativa esta em `djtools/lps.py:112-117`. Sem LPS ativa ou sem classe
+correspondente, o form conserva sua implementacao principal.
+
+Isso ocorre na criacao da **classe**, e nao a cada chamada de `is_valid()`.
+
+##### 3.4.4. Exemplo real 1: `RelatorioHorarioForm`
+
+O primeiro exemplo mostra um `FormPlus` usado como filtro de consulta. Ele e
+adequado para uma leitura inicial porque pode ser aberto diretamente pelo
+menu, utiliza dados comuns do EDU e nao altera registros no banco.
+
+O fluxo e:
+
+```text
+Ensino > Relatorios > Listagem de Horarios
+    -> /edu/relatorio_horario/
+    -> view relatorio_horario
+    -> RelatorioHorarioForm
+    -> template relatorio_horario.html
+    -> tabela de horarios
+```
+
+###### Etapa 1 - Acessar a tela
+
+1. Entrar com um usuario que possua `edu.view_horarioauladiario`.
+2. Abrir **Ensino > Relatorios > Listagem de Horarios**.
+3. Como alternativa, acessar diretamente `/edu/relatorio_horario/`.
+
+O item de menu esta em `edu/menu.yaml:554-557`. Alem de informar o endereco,
+ele declara a permissao exigida para apresentar a opcao no menu:
+
+```yaml
+Ensino::Relatorios::Listagem de Horarios:
+  permissions_required:
+  - edu.view_horarioauladiario
+  url: /edu/relatorio_horario/
+```
+
+###### Etapa 2 - Encontrar a URL
+
+**Arquivo:** `edu/urls.py`  
+**Linha:** `134`
+
+```python
+path('relatorio_horario/', views.relatorio_horario)
+```
+
+A rota nao recebe identificador. Os filtros sao enviados depois de `?` e ficam
+disponiveis em `request.GET`, por exemplo:
+
+```text
+/edu/relatorio_horario/ano_letivo=2026&periodo_letivo=1&turma=120
+```
+
+###### Etapa 3 - Abrir e entender o form
+
+**Arquivo:** `edu/forms.py`  
+**Linhas:** `4456-4503`
+
+Trecho reorganizado e comentado para leitura:
+
+```python
+class RelatorioHorarioForm(forms.FormPlus):
+    # O renderizador do SUAP enviara os filtros pela query string.
+    METHOD = 'GET'
+    SUBMIT_LABEL = 'Pesquisar'
+
+    turma = forms.ModelChoiceFieldPlus(
+        Turma.objects,
+        label='Turma',
+        required=False,
+    )
+    professor = forms.ModelChoiceFieldPlus(
+        Professor.objects,
+        label='Professor',
+        required=False,
+    )
+    sala = forms.ModelChoiceFieldPlus(Sala.ativas, required=False)
+    ano_letivo = forms.ModelChoiceField(
+        Ano.objects.ultimos(),
+        label='Ano Letivo',
+        required=True,
+    )
+    periodo_letivo = forms.ChoiceField(
+        choices=PERIODO_LETIVO_CHOICES,
+        label='Periodo Letivo',
+        required=True,
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        # Inicializa o FormPlus e, por heranca, o Form do Django.
+        super().__init__(*args, **kwargs)
+
+        # Restringe as salas ao campus do usuario recebido da view.
+        self.fields['sala'].queryset = (
+            self.fields['sala'].queryset
+            .filter(ativa=True, predio__uo=get_uo(user))
+        )
+
+    def clean(self):
+        professor = self.cleaned_data['professor']
+        turma = self.cleaned_data['turma']
+        sala = self.cleaned_data['sala']
+
+        # Exige pelo menos um criterio principal de pesquisa.
+        if not (professor or turma or sala):
+            raise forms.ValidationError(
+                'Informe turma, professor ou sala.'
+            )
+
+        # O codigo real, nas linhas 4481-4499, monta o QuerySet de
+        # HorarioAulaDiario e registra os filtros usados na pesquisa.
+        self.qs = HorarioAulaDiario.objects.all()
+        # ... aplicacao dos filtros ...
+
+        return self.cleaned_data
+
+    def processar(self):
+        # Metodo criado pela classe; nao pertence ao Django nem ao FormPlus.
+        return self.qs
+```
+
+Pontos importantes:
+
+- a classe herda de `FormPlus`, mas nao utiliza `self.request`;
+- ela declara `user` como parametro personalizado e a view o fornece como
+  argumento nomeado, porque o autor escolheu passar apenas o usuario necessario
+  para restringir as salas;
+- `user` nao e um parametro nativo do Django nem do `FormPlus`;
+- `super().__init__(*args, **kwargs)` repassa os dados para o ciclo normal;
+- `clean()` valida os filtros e prepara `self.qs`;
+- `processar()` devolve o `QuerySet` somente depois de `is_valid()`.
+
+Esse exemplo mostra que `FormPlus` pode ser usado como um `Form` comum. O
+argumento `request=request` e um recurso disponivel, mas nao obrigatorio.
+
+###### Etapa 4 - Acompanhar a view
+
+**Arquivo:** `edu/views.py`  
+**Linhas:** `6334-6373`
+
+```python
+@rtr()
+@permission_required('edu.view_horarioauladiario')
+def relatorio_horario(request):
+    title = 'Listagem de Horarios'
+
+    form = RelatorioHorarioForm(
+        data=request.GET or None,
+        user=request.user,
+    )
+
+    if form.is_valid():
+        horarios = form.processar()
+
+        # A view transforma os horarios em uma TabelaHorario.
+        tabelas = TabelasHorario(request=request)
+        tabela = TabelaHorario(export_to_pdf=True, request=request)
+        # ... montagem da tabela ...
+
+        if request.GET.get('pdf'):
+            return tabelas.as_pdf()
+
+    return locals()
+```
+
+No primeiro acesso, `request.GET` esta vazio e `request.GET or None` entrega
+`None`; o form fica unbound. Depois da pesquisa, o form fica bound, executa a
+validacao e produz a listagem.
+
+###### Etapa 5 - Relacionar com o template
+
+**Arquivo:** `edu/templates/relatorio_horario.html`  
+**Linhas:** `1-36`
+
+```django
+{% extends super_template %}
+{% block content %}
+    <div id="formbox">
+        {% render_form form %}
+    </div>
+
+    {% if form.is_valid %}
+        {% box "Resultado da Pesquisa ({{ horarios.count }} horarios)" %}
+            {% if horarios %}
+                {{ tabela }}
+            {% else %}
+                <p class="msg alert">Nenhum horario encontrado.</p>
+            {% endif %}
+        {% endbox %}
+    {% endif %}
+{% endblock %}
+```
+
+`{% render_form form %}` interpreta os campos e as convencoes do SUAP. Quando o
+form e valido, `horarios` e `tabela`, criados pela view, ficam disponiveis no
+template por causa de `return locals()`.
+
+##### 3.4.5. Exemplo real 2: `AtualizarEmailAlunoForm`
+
+O segundo exemplo evidencia o principal diferencial do `FormPlus`: o acesso a
+`self.request`. A classe usa o usuario autenticado para decidir dinamicamente
+quais campos de e-mail podem ser editados.
+
+O fluxo completo e:
+
+```text
+Tela do aluno
+    -> Editar > E-mail
+    -> /edu/atualizar_email_secundario/<aluno_pk>/
+    -> view atualizar_email
+    -> AtualizarEmailAlunoForm
+    -> template padrao do @rtr
+    -> validacao e save() proprio
+```
+
+###### Etapa 1 - Acessar a tela
+
+1. Abrir `/admin/edu/aluno/` e escolher um aluno.
+2. Na tela `/edu/aluno/<matricula>/`, abrir o menu **Editar**.
+3. Clicar em **E-mail**.
+
+Como esse fluxo grava dados, durante o estudo, deve-se apenas inspecionar a tela ou
+utilizar um aluno de teste em ambiente de desenvolvimento/homologacao.
+
+O link esta em `edu/templates/aluno.html:39-47`:
+
+```django
+{% if pode_alterar_email or eh_auxiliar_secretaria_academica %}
+    <li>
+        <a class="popup"
+           href="/edu/atualizar_email_secundario/{{ obj.pk }}/">
+            E-mail
+        </a>
+    </li>
+{% endif %}
+```
+
+O valor usado na URL e `obj.pk`, a chave primaria de `Aluno`, e nao o texto da
+matricula. O item somente aparece para quem satisfaz a regra
+`pode_alterar_email` ou pertence ao grupo **Auxiliar de Secretaria Academica**.
+A view repete a verificacao, portanto ocultar o link nao e a unica protecao.
+
+###### Etapa 2 - Encontrar a URL e a view
+
+**Arquivo:** `edu/urls.py`  
+**Linha:** `459`
+
+```python
+path('atualizar_email_secundario/<int:pk>/', views.atualizar_email)
+```
+
+**Arquivo:** `edu/views.py`  
+**Linhas:** `14091-14103`
+
+```python
+@rtr()
+@login_required()
+def atualizar_email(request, pk):
+    title = 'Atualizacao do E-mail'
+
+    # pk veio da URL e identifica o Aluno.
+    aluno = Aluno.locals.filter(pk=pk).first()
+
+    eh_auxiliar_secretaria_academica = request.user.has_group_cached(
+        'Auxiliar de Secretaria Academica'
+    )
+
+    # Protecao de backend para impedir acesso direto sem autorizacao.
+    if (
+        not eh_auxiliar_secretaria_academica
+        and not perms.pode_alterar_email(request, aluno)
+    ):
+        raise PermissionDenied()
+
+    # data e argumento do Django; request e tratado pelo FormPlus;
+    # aluno e argumento criado pelo formulario concreto.
+    form = AtualizarEmailAlunoForm(
+        request.POST or None,
+        request=request,
+        aluno=aluno,
+    )
+
+    if form.is_valid():
+        # Este save() foi implementado em AtualizarEmailAlunoForm.
+        form.save()
+        return httprr('..', 'E-mail atualizado com sucesso.')
+
+    return locals()
+```
+
+Aqui existem tres origens de argumentos:
+
+| Argumento | Quem trata | Finalidade |
+|---|---|---|
+| `request.POST or None` | `django.forms.Form` | Dados enviados e estado bound/unbound |
+| `request=request` | `FormPlus` | Cria `self.request` |
+| `aluno=aluno` | `AtualizarEmailAlunoForm` | Cria `self.aluno` |
+
+###### Etapa 3 - Entender o construtor e os campos dinamicos
+
+**Arquivo:** `edu/forms.py`  
+**Linhas:** `13128-13152`
+
+```python
+class AtualizarEmailAlunoForm(forms.FormPlus):
+    email_secundario = forms.EmailField(
+        max_length=255,
+        required=False,
+        label='E-mail Secundario',
+    )
+    email_academico = forms.EmailField(
+        max_length=255,
+        required=False,
+        label='E-mail Academico',
+    )
+    email_google_classroom = forms.EmailField(
+        max_length=255,
+        required=False,
+        label='E-mail Google ClassRoom',
+    )
+
+    def __init__(self, *args, **kwargs):
+        # aluno e um argumento exclusivo desta classe.
+        self.aluno = kwargs.pop('aluno')
+
+        # FormPlus retira request de kwargs, cria self.request e chama
+        # o construtor do Form do Django.
+        super().__init__(*args, **kwargs)
+
+        # O codigo real garante que o aluno tenha um vinculo antes de
+        # acessar a pessoa relacionada ao e-mail secundario.
+        if self.aluno.get_vinculo() is None:
+            self.aluno.save()
+
+        # Preenche os valores iniciais com os dados atuais do aluno.
+        self.fields['email_secundario'].initial = (
+            self.aluno.get_vinculo().pessoa.email_secundario
+        )
+        self.fields['email_academico'].initial = self.aluno.email_academico
+        self.fields['email_google_classroom'].initial = (
+            self.aluno.email_google_classroom
+        )
+
+        # Usa self.request.user, fornecido pelo FormPlus, para consultar
+        # grupo e permissoes do usuario atual.
+        cra = UsuarioGrupo.objects.filter(
+            user=self.request.user,
+            group__name='Coordenador de Registros Academicos',
+            setores__uo=self.aluno.curso_campus.diretoria.setor.uo_id,
+        ).exists()
+
+        # A instancia do formulario e personalizada para o usuario atual.
+        if (
+            not self.request.user.has_perm(
+                'rh.pode_editar_email_secundario_aluno'
+            )
+            and not cra
+        ):
+            del self.fields['email_secundario']
+
+        if not self.request.user.has_perm('rh.pode_editar_email_academico'):
+            del self.fields['email_academico']
+
+        if not self.request.user.has_perm(
+            'rh.pode_editar_email_google_classroom'
+        ):
+            del self.fields['email_google_classroom']
+```
+
+O ponto central e que `self.fields` pertence a instancia atual do form. Remover
+um campo nesse dicionario altera somente o formulario criado para aquela
+requisicao. Assim, dois usuarios com permissoes diferentes podem abrir a mesma
+URL e receber conjuntos de campos diferentes.
+
+> Ocultar o campo e importante para a interface, mas a autorizacao principal
+> continua na view. Formulario dinamico e verificacao de acesso cumprem papeis
+> complementares.
+
+###### Etapa 4 - Validacao e `save()` proprio
+
+As validacoes estao em `edu/forms.py:13154-13188`. A classe implementa um
+`clean_<campo>()` para cada tipo de e-mail. Entre as regras aplicadas estao:
+
+- impedir e-mail institucional onde a configuracao exige e-mail pessoal;
+- impedir e-mail academico ja usado por outro aluno ou servidor;
+- consultar a lista de e-mails bloqueados;
+- verificar duplicidade no LDAP quando a integracao esta ativa;
+- impedir duplicidade do e-mail do Google Classroom.
+
+Depois da validacao, a view chama `form.save()`. Esse metodo existe porque foi
+criado pela propria classe em `edu/forms.py:13190-13197`:
+
+```python
+def save(self):
+    if 'email_academico' in self.cleaned_data:
+        self.aluno.email_academico = self.cleaned_data.get(
+            'email_academico'
+        )
+
+    if 'email_google_classroom' in self.cleaned_data:
+        self.aluno.email_google_classroom = self.cleaned_data.get(
+            'email_google_classroom'
+        )
+
+    self.aluno.save()
+
+    if 'email_secundario' in self.cleaned_data:
+        Pessoa.objects.filter(
+            pk=self.aluno.get_vinculo().pessoa.id
+        ).update(
+            email_secundario=self.cleaned_data.get('email_secundario')
+        )
+```
+
+O teste `'campo' in self.cleaned_data` e necessario porque campos sem permissao
+foram removidos em `__init__()` e, portanto, nao participam da validacao. O
+metodo atualiza dados em dois locais: e-mails academicos em `Aluno` e o e-mail
+secundario na pessoa relacionada.
+
+Este `save()` nao e o `save()` automatico de um `ModelForm`. Trata-se de um
+metodo comum, escrito especificamente para coordenar essa operacao.
+
+###### Etapa 5 - Descobrir o template usado
+
+Nao existe `edu/templates/atualizar_email.html`. Como `@rtr()` nao recebeu um
+template e nao encontrou o arquivo deduzido pelo nome da view, o DJTools usa o
+template generico `djtools/templates/default.html`, conforme
+`djtools/utils/response.py:115-145`.
+
+O trecho responsavel por apresentar o formulario esta em
+`djtools/templates/default.html:12-18`:
+
+```django
+{% if h1 or form.TITLE %}
+    <h2>{{ h1 }}{{ form.TITLE }}</h2>
+{% endif %}
+
+{% if form %}
+    {% render_form form %}
+{% endif %}
+```
+
+Essa convencao permite que uma tela simples use apenas URL, view e form. Um
+template especifico continua sendo necessario quando a pagina precisa exibir
+informacoes ou organizacao alem do formulario padrao.
+
+###### Etapa 6 - Fluxo do `request` neste exemplo
+
+```text
+view recebe HttpRequest
+-> passa request=request ao AtualizarEmailAlunoForm
+-> AtualizarEmailAlunoForm remove aluno de kwargs
+-> super() entra em FormPlus
+-> FormPlus remove request de kwargs
+-> request fica disponivel em self.request
+-> super() entra no Form do Django com request.POST
+-> __init__ consulta self.request.user e remove campos sem permissao
+-> is_valid() valida somente os campos presentes
+-> save() grava somente valores existentes em cleaned_data
+```
+
+##### 3.4.6. Diferencas principais entre `Form` e `FormPlus`
+
+| Aspecto | `Form` | `FormPlus` |
+|---|---|---|
+| Origem | Django | DJTools/SUAP |
+| Classe-base | `BaseForm` | `django.forms.Form` |
+| Declaracao manual de campos | Sim | Sim, por heranca |
+| Estado bound/unbound | Sim | Sim, por heranca |
+| `is_valid()`, `errors` e `cleaned_data` | Sim | Sim, por heranca |
+| `clean_<campo>()` e `clean()` | Sim | Sim, por heranca |
+| Recebe `request=request` diretamente | Nao | Sim |
+| Disponibiliza `self.request` | Nao | Sim, se o argumento for passado |
+| Suporte a customizacao LPS | Nao | Sim, por `MetaFormPlus` |
+| `save()` automatico | Nao | Nao |
+| Ligacao automatica com model | Nao | Nao |
+
+##### 3.4.7. O que nao e exclusivo de `FormPlus`
+
+Na base do SUAP aparecem atributos e metodos como:
+
+```python
+METHOD = 'GET'
+SUBMIT_LABEL = 'Pesquisar'
+fieldsets = (...)
+
+def processar(self):
+    ...
+```
+
+Eles nao estao implementados nas oito linhas de `FormPlus`:
+
+- `METHOD`, `SUBMIT_LABEL` e `fieldsets` sao convencoes consumidas pela camada
+  de renderizacao do SUAP;
+- `processar()` e um metodo definido por cada form ou classe-base especifica;
+- campos como `CharFieldPlus`, `ModelChoiceFieldPlus` e widgets do DJTools
+  podem ser usados tanto em `Form` quanto em `FormPlus`.
+
+Portanto, a presenca da palavra `Plus` em um campo nao exige que a classe seja
+`FormPlus`.
+
+##### 3.4.8. Qual classe escolher
+
+Usar `Form` quando:
+
+- o formulario e independente de model;
+- os recursos padrao do Django sao suficientes;
+- nao sera necessario passar `request` nem aplicar customizacao LPS.
+
+Usar `FormPlus` quando:
+
+- o formulario e independente de um unico model;
+- precisa acessar usuario, sessao ou dados da requisicao por `self.request`;
+- precisa participar do mecanismo de LPS;
+- o padrao local do fluxo ja utiliza `FormPlus`.
+
+Usar `ModelFormPlus`, e nao uma dessas duas classes, quando o objetivo principal
+for criar ou editar uma instancia de model com `instance` e `form.save()`.
+
+Resumo:
+
+```text
+FormPlus = Form do Django + request opcional + metaclasse de LPS
+```
+
+Ele nao substitui o Django; ele reutiliza o Django e acrescenta dois pontos de
+integracao necessarios ao SUAP.
 
 #### 3.5. Como funciona `MetaFormPlus`
 
@@ -1031,13 +2162,46 @@ save() persiste a instance
 
 #### 4.3. O papel da classe `Meta`
 
-Os dois atributos centrais são:
+Em um `ModelFormPlus`, a classe interna `Meta` funciona como a configuração do formulário. Ela informa ao Django qual model está relacionado ao form e quais partes desse model poderão aparecer na tela ou ser alteradas.
+
+A classe `Meta` não representa um registro do banco e não cria uma nova tabela. Ela é lida durante a criação da classe do formulário. A partir dessas configurações, o Django monta os campos, associa cada campo ao atributo correspondente do model e aplica opções de apresentação e validação.
+
+Pense na relação desta forma:
+
+- o model define todos os dados possíveis da entidade;
+- a classe `Meta` escolhe quais desses dados participarão deste formulário;
+- o `ModelFormPlus` transforma essa escolha em campos, regras e comportamento de edição.
+
+Exemplo básico:
 
 ```python
-class Meta:
-    model = PlanoEnsino
-    fields = ('coordenador_curso', 'ementa')
+class AlterarPlanoEnsinoForm(forms.ModelFormPlus):
+    class Meta:
+        model = PlanoEnsino
+        fields = ('coordenador_curso', 'ementa')
 ```
+
+Nesse exemplo, o formulário está ligado ao model `PlanoEnsino`, mas expõe apenas `coordenador_curso` e `ementa`. Outros atributos do model, como identificadores, datas ou campos de controle, não serão criados automaticamente no formulário.
+
+A configuração também pode personalizar a apresentação dos campos:
+
+```python
+class AlunoForm(forms.ModelFormPlus):
+    class Meta:
+        model = Aluno
+        fields = ('nome', 'data_nascimento')
+        labels = {
+            'nome': 'Nome completo',
+            'data_nascimento': 'Data de nascimento',
+        }
+        help_texts = {
+            'nome': 'Informe o nome exatamente como consta no documento.',
+        }
+```
+
+Aqui, `labels` altera o texto exibido ao participante e `help_texts` acrescenta uma orientação ao campo. Essas opções mudam a apresentação sem alterar os campos do model.
+
+Os atributos mais usados são:
 
 | Atributo | Função |
 |---|---|
@@ -1064,18 +2228,30 @@ sem ela, o valor seria apenas uma string.
 
 #### 4.4. Como funciona `instance`
 
-`instance` e o objeto do model que o formulário está manipulando.
+Em um `ModelFormPlus`, `instance` é o objeto do model que o formulário representa. Ele informa ao Django qual registro deve ser editado. O mesmo formulário pode ser usado para criar um registro novo ou alterar um registro existente.
 
-Sem informar `instance`, o Django prepara uma nova instância ainda não salva:
+A decisão depende da presença de `instance`:
+
+- sem `instance`, o formulário prepara uma nova instância do model e `save()` normalmente executa um `INSERT`;
+- com `instance`, o formulário mantém a identidade do objeto recebido e `save()` normalmente executa um `UPDATE`;
+- o valor de `pk` da instância permite ao Django localizar o registro que será atualizado.
+
+#### Criando um novo registro
+
+Quando a tela cadastra um objeto, o formulário recebe os dados enviados, mas não recebe uma instância existente:
 
 ```python
 form = PlanoEnsinoForm(data=request.POST or None)
 
 if form.is_valid():
-    plano = form.save()  # executa INSERT
+    plano = form.save()  # cria um novo registro (INSERT)
 ```
 
-Informando `instance`, o formulário altera o objeto existente:
+Nesse caso, `form.instance` começa como uma instância nova de `PlanoEnsino`, ainda sem `pk`. Depois de `save()`, o banco cria a linha e o Django atualiza a instância com o identificador gerado.
+
+#### Editando um registro existente
+
+Na edição, a view primeiro busca o objeto e depois o entrega ao formulário:
 
 ```python
 plano = get_object_or_404(PlanoEnsino, pk=pk)
@@ -1085,14 +2261,48 @@ form = PlanoEnsinoForm(
 )
 
 if form.is_valid():
-    plano = form.save()  # executa UPDATE
+    plano = form.save()  # altera o registro existente (UPDATE)
+```
+
+Como o formulário conhece a instância e seu `pk`, ele altera os campos permitidos de `plano`. Ele não cria outro Plano de Ensino para a mesma operação.
+
+O fluxo completo de uma edição:
+
+```text
+URL recebe o pk
+        |
+view busca o objeto com get_object_or_404()
+        |
+form recebe instance=objeto
+        |
+form.is_valid() valida os dados
+        |
+form.save() atualiza a mesma linha
+```
+
+#### `instance` não é o mesmo que `initial`
+
+`instance` define o objeto que será alterado e mantém sua identidade no banco. Já `initial` apenas fornece valores iniciais para a apresentação do formulário; ele não vincula o form a um registro e não determina um `UPDATE`.
+
+```python
+form = AlunoForm(
+    initial={'nome': 'Nome sugerido'},
+)
+
+# O formulário ainda não está editando um objeto específico.
+```
+
+Para editar um aluno, é necessário fornecer a instância:
+
+```python
+aluno = get_object_or_404(Aluno, pk=pk)
+form = AlunoForm(instance=aluno)
 ```
 
 Na implementação do Django, isso ocorre em
 `django/forms/models.py:340-384`: se `instance` for `None`, o formulário cria
-`opts.model()`; caso contrario, armazena a instância recebida em
+`opts.model()`; caso contrário, armazena a instância recebida em
 `self.instance`.
-
 #### 4.5. O que `is_valid()` faz em um `ModelForm`
 
 Em um `ModelForm`, `is_valid()` executa as validacoes comuns de um form e uma
@@ -1240,7 +2450,7 @@ def definir_requisitos(request, pk):
     return locals()
 ```
 
-Esse exemplo também demonstra que atributos utilizados pela camada visual do
+Esse exemplo também mostra que atributos utilizados pela camada visual do
 SUAP, como `SUBMIT_LABEL` e `fieldsets`, podem existir em um `ModelForm`
 comum. Eles não são, por si sos, recursos exclusivos de `ModelFormPlus`.
 
@@ -1270,7 +2480,7 @@ ModelFormPlus
 **Arquivo:** `djtools/forms/__init__.py`  
 **Linhas:** `65-74`
 
-A seguir, a implementação comentada explica cada parte do código.
+A implementação abaixo mostra cada parte do código e sua responsabilidade.
 
 A mesma implementação, comentada linha a linha:
 
@@ -1434,7 +2644,7 @@ necessário chamar `form.save_m2m()` após `obj.save()`.
 
 Em `edu/forms.py:14168-14171`, o formulário declara apenas o model e o campo:
 
-A seguir, a implementação comentada explica cada parte do código.
+A implementação comentada apresenta cada parte do código.
 
 Em `edu/views.py:14728-14737`, a view fornece a instância existente. O trecho
 abaixo simplifica apenas o filtro de busca do objeto para destacar o fluxo do
@@ -1672,7 +2882,7 @@ URL em `edu/urls.py:26`:
 path('replicar_matriz/<int:pk>/', views.replicar_matriz),
 ```
 
-A seguir, a implementação comentada explica cada parte do código.
+A implementação comentada apresenta cada parte do código.
 
 View em `edu/views.py:1473-1485`:
 
@@ -2035,7 +3245,7 @@ GET deve ser usado para consultar informações sem alterar o estado do sistema.
 Os valores são enviados na própria URL, depois de `?`:
 
 ```text
-/edu/relatorio_horario/?ano_letivo=2026&periodo_letivo=1&turma=120
+/edu/relatorio_horario/ano_letivo=2026&periodo_letivo=1&turma=120
 ```
 
 O Django disponibiliza esses parâmetros em `request.GET`, que e um
@@ -2073,7 +3283,7 @@ Cuidados:
 
 O `RelatorioHorarioForm`, em `edu/forms.py:4456-4503`, declara:
 
-A seguir, a implementação comentada explica cada parte do código.
+A implementação comentada apresenta cada parte do código.
 
 `METHOD = 'GET'` e um atributo utilizado pela camada de renderizacao do SUAP.
 Ele faz o HTML do formulário usar `method="GET"`, mas não entrega os dados ao
@@ -2114,7 +3324,7 @@ Fluxo desse exemplo:
 Usuario preenche os filtros
         |
         v
-Navegador monta a URL com ?campo=valor
+Navegador monta a URL com campo=valor
         |
         v
 request.GET recebe os parametros
@@ -2213,7 +3423,7 @@ Na submissao por POST:
 campo:
 
 ```text
-?curso=10&curso=20&curso=30
+curso=10&curso=20&curso=30
 ```
 
 ```python
@@ -2820,15 +4030,13 @@ O form e ModelFormPlus e representa diretamente um model?
 
 ### 1. Visão geral do fluxo
 
-Neste fluxo, o usuário abre uma matriz existente, informa a descrição da copia e
-solicita sua replicacao. O exemplo e especialmente util porque separa com clareza
-tres responsabilidades:
+A replicação de uma matriz existente percorre três responsabilidades principais. A tela recebe a descrição da nova matriz, o formulário transforma e valida esse dado, e o model executa a regra de negócio que duplica a matriz e seus componentes.
 
 | Camada | Responsabilidade neste exemplo |
 |---|---|
 | View | Receber a requisição, verificar permissão, localizar a matriz e coordenar o fluxo |
 | Form | Exibir, receber, converter e validar a nova descrição |
-| Model | Executar a regra de negocio que replica a matriz e seus componentes |
+| Model | Executar a regra de negócio que replica a matriz e seus componentes |
 
 O fluxo comeca na URL declarada em `edu/urls.py:26`:
 
@@ -2842,7 +4050,7 @@ ao acessar `/edu/replicar_matriz/15/`, o Django chama a view
 
 ### 2. Formulário `ReplicacaoMatrizForm`
 
-A seguir, a implementação comentada explica cada parte do código.
+A implementação comentada apresenta cada parte do código.
 
 #### Por que a classe herda de `FormPlus`?
 
@@ -3192,7 +4400,7 @@ campo no model
 
 O código está em `edu/models/plano_ensino.py:6-34`. O trecho completo usado no exemplo e:
 
-A seguir, a implementação comentada explica cada parte do código.
+A implementação comentada apresenta cada parte do código.
 
 #### Model comentado
 
@@ -3263,7 +4471,7 @@ somente para está tela.
 
 O código está em `edu/forms.py:14168-14171`:
 
-A seguir, a implementação comentada explica cada parte do código.
+A implementação comentada apresenta cada parte do código.
 
 #### Form comentado
 
@@ -3394,9 +4602,9 @@ form.save_m2m()
 
 ### 5. Sequência do fluxo
 
-1. Mostrar o campo `coordenador_curso` no model.
-2. Mostrar que o form expoe somente esse campo.
-3. Mostrar o filtro institucional usado para localizar o objeto.
+1. Confira o campo `coordenador_curso` no model.
+2. Confira que o form expoe somente esse campo.
+3. Identifique o filtro institucional usado para localizar o objeto.
 4. Destacar `instance=obj`.
 5. Submeter um valor inválido e observar os erros.
 6. Submeter um valor válido e acompanhar `form.save()`.
@@ -3424,7 +4632,7 @@ Como não cria nem altera diretamente um model, ele herda de `FormPlus`, e não 
 
 O código está em `edu/forms.py:4456-4503`:
 
-A seguir, a implementação comentada explica cada parte do código.
+A implementação comentada apresenta cada parte do código.
 
 ### 3. Estrutura do formulário
 
@@ -3949,7 +5157,7 @@ Nesse exemplo:
 
 Para campos relacionados a models, o SUAP oferece campos de escolha que trabalham com querysets:
 
-A seguir, a implementação comentada explica cada parte do código.
+A implementação comentada apresenta cada parte do código.
 
 O navegador envia os identificadores selecionados, mas depois da validação o formulário entrega instâncias dos models em `cleaned_data`:
 
@@ -4056,7 +5264,7 @@ AutocompleteWidget
 
 Um formulário usa o widget no campo relacionado ao model:
 
-A seguir, a implementação comentada explica cada parte do código.
+A implementação comentada apresenta cada parte do código.
 
 Quando o template renderiza esse formulário, o Django combina o campo, o widget e os recursos definidos em `Media`. O HTML inicial contém o campo e os atributos necessários; os arquivos Select2 e os scripts do DJTools completam o comportamento no navegador.
 
@@ -4407,7 +5615,7 @@ Assim, dois usuários podem receber a mesma tela com conjuntos de salas diferent
 
 Também é possível configurar valores iniciais e campos dependentes:
 
-A seguir, a implementação comentada explica cada parte do código.
+A implementação comentada apresenta cada parte do código.
 
 Nesse caso, `curso` começa com `none()` para não carregar todos os cursos. Depois que a view informa o campus, o queryset é preenchido apenas com cursos ativos daquele campus. Se nenhum campus for informado, a lista permanece vazia.
 
@@ -5042,6 +6250,19 @@ Arquivo novo: `edu/templates/ficha_resumida_aluno_pdf.html`.
 
 O exemplo evita CPF, endereco e dados sociais. Se a atividade incluir dados pessoais, deve exigir uma permissão adequada, como `edu.view_dados_pessoais`, e revisar a necessidade de armazenar o PDF.
 
+##### Adicionar template no Menu
+
+Para que a tela fique disponível para o participante no menu do SUAP, inclua a entrada correspondente na configuração de menus:
+
+```yaml
+Ensino::Alunos e Professores::Ficha Resumida de Aluno:
+  permissions_required:
+  - edu.view_aluno
+  url: /edu/ficha_resumida_aluno/
+```
+
+O caminho define a hierarquia exibida no menu, `permissions_required` restringe a opção aos usuários que possuem a permissão `edu.view_aluno` e `url` aponta para a tela inicial do formulário.
+
 #### 2. Listagem de alunos por curso
 
 ##### Objetivo da atividade
@@ -5614,7 +6835,7 @@ campos do model.
 
 ##### 2. Comparar com o form existente do SUAP
 
-O exemplo reduzido parte de `edu/forms.py:215-314` e mostrar o
+O exemplo reduzido parte de `edu/forms.py:215-314` e apresenta o
 `AlunoForm`, que também herda de `forms.ModelFormPlus`.
 
 O bloco de RG aparece em `edu/forms.py:276`:
@@ -5716,7 +6937,7 @@ Em um `ModelFormPlus`, `Meta.fields` define quais atributos do model podem parti
 
 No exemplo da edição do documento RG:
 
-A seguir, a implementação comentada explica cada parte do código.
+A implementação comentada apresenta cada parte do código.
 
 Os três campos têm papéis diferentes:
 
@@ -6102,7 +7323,7 @@ bloco `Documentos` mostra os dados do RG em
 <dd>{{ obj.uf_emissao_rg|format|normalizar }}</dd>
 ```
 
-Esse fechamento permite demonstrar o ciclo completo:
+Esse fechamento permite acompanhar o ciclo completo:
 
 ```text
 model -> form -> view -> validacao -> save -> banco -> template de consulta
@@ -6302,7 +7523,7 @@ A tela reúne dados de três origens diferentes. Por isso, a primeira pergunta n
 
 ```text
 Titulação
-    -> Professor.titulação
+    -> Professor.titulacao
     -> edu/forms.py
 
 E-mail institucional
@@ -6321,7 +7542,7 @@ A regra geral é: reutilize validáções, permissões e telas existentes sempre
 O `ProfessorExternoForm` já declara o campo de titulação em `edu/forms.py:4776`:
 
 ```python
-titulação = forms.ChoiceField(
+titulacao = forms.ChoiceField(
     label='Titulação',
     choices=[['', '-----']] + Professor.TITULACAO_CHOICES,
     required=False,
@@ -6769,7 +7990,7 @@ def editar_dados_professor(request, pk):
 
 O exemplo envolve tres responsabilidades e, portanto, tres permissões:
 
-| Operação | Permissão | Onde e verificada |
+| Operação | Permissão | Onde e verificada |a
 |---|---|---|
 | Alterar titulacao do EDU | `edu.change_professor` | Decorador da nova view |
 | Alterar e-mail institucional | `rh.pode_editar_email_institucional` | Corpo da nova view |
@@ -6962,7 +8183,7 @@ Verifica o CAMPUS pelo UnidadeOrganizacional.locals
         |
 Cria EditarDadosProfessorForm com professor=professor
         |
-__init__() preenche titulação e e-mail atuais
+__init__() preenche titulacao e e-mail atuais
         |
 Template renderiza o formulário e os telefones do setor
 ```
@@ -6978,7 +8199,7 @@ POST /edu/editar_dados_professor/<pk>/
         |
 form.is_valid()
         |
-ChoiceField valida a titulação
+ChoiceField valida a titulacao
         |
 clean_email_institucional()
         |
@@ -7024,13 +8245,13 @@ A view de telefones repete a permissão `rh.pode_gerenciar_setor_telefone`. A no
 ```text
 URL -> identifica o professor
 Quando o usuário abre a tela, a requisição passa por estas verificações:
-Form -> valida titulação e e-mail
+Form -> valida titulacao e e-mail
 processar() -> grava Professor e Servidor em uma transação
 Template -> exibe campos, mensagens e telefones
 Fluxo do setor -> gerencia SetorTelefone
 ```
 
-Esse desenho explica por que a edicao de dados do professor usa `FormPlus`: a tela coordena informaçãoes de models diferentes, enquanto cada fluxo mant?m a responsabilidade pelo próprio dado.
+Esse desenho explica por que a edicao de dados do professor usa `FormPlus`: a tela coordena informaçãoes de models diferentes, enquanto cada fluxo mantém a responsabilidade pelo próprio dado.
 
 ##### 16. Comparar os dois exemplos de edição
 

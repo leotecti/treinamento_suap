@@ -197,13 +197,18 @@ const course = [
     id: "m5",
     num: "05",
     name: "Models do SUAP",
-    desc: "Compreenda models, relacionamentos, regras de negócio, consultas ORM e migrations no módulo EDU.",
+    desc: "Django Models no SUAP EDU: estrutura, persistência, consultas e regras de negócio.",
     goals: [
-      "Identificar o papel de um model no Django e no SUAP",
-      "Ler campos, relacionamentos, Meta, ModelPlus e LogModel",
-      "Compreender save(), clean(), full_clean(), update() e delete()",
-      "Compor consultas eficientes e evitar o problema N+1",
+      "Compreender o papel do model no padrão MTV do Django",
+      "Diferenciar classe, instância, registro, tabela e QuerySet",
+      "Ler campos, relacionamentos, opções e metadados do model",
+      "Reconhecer ModelPlus, LogModel e campos Plus do SUAP",
+      "Compreender managers, QuerySets e consultas eficientes",
+      "Aplicar save(), delete(), clean() e full_clean() com segurança",
+      "Criar e revisar migrations do módulo EDU",
       "Relacionar models com forms, views, templates, admin e relatórios",
+      "Distinguir save() de atualizações diretas com update()",
+      "Revisar e testar uma alteração de model antes de integrá-la ao sistema",
     ],
     tasks: [
       "Leia um model real e reconstrua seu caminho até a tela.",
@@ -1148,18 +1153,24 @@ function module3() {
   );
 }
 function module6() {
-  const content = (window.SUAP_ADMIN_HTML || "<p>O conte\u00fado de Admin ainda n\u00e3o foi carregado.</p>").replace(/^<h1>[\s\S]*?<\/h1>/, "");
-  return '<div class="reading-layout"><div class="reading-main"><section class="panel"><span class="tag">ENCONTRO 06 \u00b7 ADMIN DO SUAP</span><h2>Da configura\u00e7\u00e3o do model \u00e0 interface administrativa</h2><p>Estude como o Django Admin e as extens\u00f5es do SUAP transformam models em telas de consulta, cadastro e edi\u00e7\u00e3o.</p><div class="tip"><strong>Como estudar:</strong> acompanhe os arquivos, execute os exemplos em ambiente isolado e registre o efeito de cada configura\u00e7\u00e3o.</div></section><div class="admin-content toc-content">' + content + '</div></div><button class="toc-float" id="admin-toc-toggle" type="button" aria-expanded="false" aria-controls="admin-right-toc">T\u00f3picos</button><aside class="right-toc" id="admin-right-toc" aria-label="T\u00f3picos da p\u00e1gina"><h2>Nesta p\u00e1gina</h2><nav></nav></aside></div>';
+  const content = window.SUAP_ADMIN_HTML || "<p>O conteúdo de Admin ainda não foi carregado.</p>";
+  return '<div class="reading-layout"><div class="reading-main"><div class="admin-content toc-content">' + content + '</div></div><button class="toc-float" id="admin-toc-toggle" type="button" aria-expanded="false" aria-controls="admin-right-toc">Tópicos</button><aside class="right-toc" id="admin-right-toc" aria-label="Tópicos da página"><h2>Nesta página</h2><nav></nav></aside></div>';
 }
 function enhanceFormDiagrams() {
   document.querySelectorAll(".forms-content .form-code.form-diagram, .models-content .model-code, .admin-content .form-code.form-diagram").forEach((panel) => {
     if (panel.classList.contains("visual-diagram")) return;
     const code = panel.querySelector("code");
     if (!code) return;
+    const explicitDiagram = panel.classList.contains("form-diagram");
+    const language = (panel.querySelector(".tag")?.textContent || "").toLowerCase();
+    // Somente blocos textuais (ou marcados explicitamente) viram diagramas.
+    // Assim, um comentário Python que contenha "->" continua sendo código.
+    if (!explicitDiagram && !/(text|plain|diagram|flow)/.test(language)) return;
     const raw = code.textContent.trim();
     const lines = raw.split("\n").map((line) => line.trim()).filter(Boolean);
-    if (!lines.some((line) => /^(\||v|↓|→|->|<-)\s*$/.test(line) || /\s(→|->)\s/.test(line))) return;
-    const nodes = lines.filter((line) => !/^(\||v|↓|→|->|<-)\s*$/.test(line));
+    const diagramLines = lines.filter((line) => !/^(#|\/\/|--|<!--)/.test(line));
+    if (!diagramLines.some((line) => /^(\||v|↓|→|->|<-)\s*$/.test(line) || /\s(→|->)\s/.test(line))) return;
+    const nodes = diagramLines.filter((line) => !/^(\||v|↓|→|->|<-)\s*$/.test(line));
     const source = panel.innerHTML;
     panel.classList.add("visual-diagram");
     panel.innerHTML = `<div class="visual-flow" role="img" aria-label="Diagrama do fluxo">${nodes.map((node, index) => `<div class="visual-flow-node">${escape(node)}</div>${index < nodes.length - 1 ? '<div class="visual-flow-arrow" aria-hidden="true">↓</div>' : ""}`).join("")}</div><details class="diagram-source"><summary>Ver representação textual</summary>${source}</details>`;
@@ -1175,7 +1186,8 @@ function module4() {
   return `<div class="reading-layout"><div class="reading-main"><section class="panel"><span class="tag">ENCONTRO 04 &middot; FORMS E RELAT&Oacute;RIOS</span><h2>Do dado enviado ao relat&oacute;rio final</h2><p>Estude como o SUAP recebe dados, valida formul&aacute;rios, consulta models, edita registros e gera relat&oacute;rios ou PDFs.</p></section>${index}<div class="forms-content">${updatedContent}</div></div><aside class="right-toc" id="forms-right-toc" aria-label="T&oacute;picos da p&aacute;gina"><h2>Nesta p&aacute;gina</h2><nav></nav></aside></div>`;
 }
 function module5() {
-  const content = window.SUAP_MODELS_HTML || "<p>O conteúdo de Models ainda não foi carregado.</p>";
+  const content = (window.SUAP_MODELS_HTML || "<p>O conteúdo de Models ainda não foi carregado.</p>")
+    .replace(/^<h1[^>]*>[\s\S]*?<\/h1>\s*/, "");
   const structure = `<section class="panel models-structure"><h2>Como os models são organizados no módulo EDU</h2><p>O módulo EDU separa os models por área do domínio. Assim, cada arquivo permanece legível e você consegue começar a investigação pelo tipo de dado envolvido.</p><div class="visual-flow" role="img" aria-label="Organização dos arquivos de models do EDU"><div class="visual-flow-node"><code>edu/models/alunos.py</code><br>Aluno e dados acadêmicos</div><div class="visual-flow-arrow">↓</div><div class="visual-flow-node"><code>edu/models/turmas.py</code><br>Turma e período letivo</div><div class="visual-flow-arrow">↓</div><div class="visual-flow-node"><code>edu/models/__init__.py</code><br>Reexporta as classes do pacote</div></div><p>Os arquivos ficam separados fisicamente, mas podem ser usados de forma uniforme:</p><pre class="codebox"><code>from edu.models import Turma</code></pre><p>Depois de localizar o arquivo, confirme a classe e o identificador usado pelo Django:</p><pre class="codebox"><code>rg -n '^class Turma\\\\b' edu/models\n\nfrom edu.models import Turma\nprint(Turma._meta.app_label)  # edu\nprint(Turma._meta.model_name) # turma</code></pre></section>`;
   const mapGuide = `<section class="panel models-map-guide"><h2>Como usar o mapa durante uma investigação</h2><ol><li><strong>Identifique o vocabulário:</strong> turma, matrícula, diário e plano de ensino indicam o domínio provável.</li><li><strong>Escolha o primeiro arquivo:</strong> comece em <code>turmas.py</code> para regras de turma ou em <code>historico.py</code> para matrículas.</li><li><strong>Confirme a classe:</strong> leia classe-base, campos, <code>Meta</code>, managers e métodos.</li><li><strong>Siga os relacionamentos:</strong> um <code>ForeignKey</code> ou método pode levar a outro arquivo.</li><li><strong>Procure os usos:</strong> siga depois para forms, views, templates, admin e migrations.</li></ol><p>Exemplo: uma demanda sobre horários pode percorrer <code>Turma</code> em <code>turmas.py</code>, os diários em <code>diarios.py</code>, a view e, por fim, o template da tela.</p></section>`;
   const importsGuide = `<section class="panel models-imports-guide"><h2>Dependência circular entre imports</h2><p>Ela ocorre quando <code>turmas.py</code> importa <code>historico.py</code> e, durante o carregamento, <code>historico.py</code> tenta importar <code>turmas.py</code> novamente. Uma das classes ainda está incompleta.</p><div class="visual-flow" role="img" aria-label="Ciclo de imports entre models"><div class="visual-flow-node"><code>turmas.py</code> importa <code>historico.py</code></div><div class="visual-flow-arrow">↓</div><div class="visual-flow-node"><code>historico.py</code> importa <code>turmas.py</code></div><div class="visual-flow-arrow">↓</div><div class="visual-flow-node">Classe parcialmente inicializada</div></div><p>Para evitar o ciclo, use referências em string nos relacionamentos, imports locais dentro dos métodos ou um módulo independente para regras compartilhadas.</p><pre class="codebox"><code>turma = models.ForeignKeyPlus('edu.Turma')\n\n# ou, dentro do método:\nfrom edu.models import Turma</code></pre></section>`;
@@ -1213,7 +1225,7 @@ function module5() {
   const nPlusOneCompareGuide = `<section class="panel models-nplusone-compare-guide"><h2>Problema N+1: comparação</h2><p>Sem otimização, o loop pode abrir uma consulta para cada relação. Use <code>select_related()</code> para chaves estrangeiras e <code>prefetch_related()</code> para relações reversas ou muitos-para-muitos.</p><pre class="codebox"><code># Pode gerar N+1 consultas\nalunos = Aluno.objects.order_by('pk')[:10]\nfor aluno in alunos:\n    print(aluno.pessoa_fisica.nome)\n\n# Uma consulta com JOIN para relações de valor único\nalunos = Aluno.objects.select_related(\n    'pessoa_fisica', 'curso_campus',\n).order_by('pk')[:10]</code></pre><pre class="codebox"><code># Relação reversa sem prefetch\nfor turma in Turma.objects.all():\n    list(turma.diario_set.all())\n\n# Duas consultas: turmas + todos os diários relacionados\nturmas = Turma.objects.prefetch_related('diario_set')</code></pre></section>`;
   const testsGuide = `<section class="panel models-tests-guide"><h2>O que cada teste verifica</h2><p>Testes de model verificam valores padrão, choices, representação, validação, unicidade, persistência, exclusão e métodos de domínio.</p><pre class="codebox"><code>def test_clean_rejeita_data_anterior(self):\n    aviso = AvisoTurma(data_expiracao=date(2026, 1, 1))\n    with self.assertRaises(ValidationError):\n        aviso.full_clean()\n\ndef test_unicidade(self):\n    Componente.objects.create(sigla='MAT')\n    with self.assertRaises(ValidationError):\n        Componente(sigla='MAT').validate_unique()\n\ndef test_exclusao_em_cascata(self):\n    turma = TurmaFactory()\n    aviso = AvisoTurmaFactory(turma=turma)\n    turma.delete()\n    self.assertFalse(AvisoTurma.objects.filter(pk=aviso.pk).exists())\n\ndef test_metodo_de_dominio(self):\n    aviso = AvisoTurmaFactory()\n    aviso.cancelar('Encerrado')\n    self.assertTrue(aviso.cancelado)</code></pre></section>`;
   const reviewGuide = `<section class="panel models-review-guide"><h2>Aplicando o checklist em uma revisão</h2><p>Para uma alteração como <code>data_expiracao</code> em <code>AvisoTurma</code>, confirme: o campo pertence ao model; registros antigos aceitam <code>NULL</code>; migration e índice são necessários; o manager mantém o escopo; form, view, admin, template e PDF exibem o valor; não surgiu N+1; e <code>check</code>, migration e testes passaram.</p><pre class="codebox"><code>python manage.py check\npython manage.py makemigrations edu --check\npython manage.py test edu.tests.AvisoTurmaTestCase</code></pre><p>A revisão deve relacionar cada pergunta a um arquivo, comando ou comportamento observável, e não apenas marcar itens de uma lista.</p></section>`;
-  return `<div class="reading-layout"><div class="reading-main"><section class="panel"><span class="tag">ENCONTRO 05 · MODELS DO SUAP</span><h2>Do model à regra de negócio</h2><p>Estude como o SUAP representa entidades, persiste dados, executa consultas e integra models com forms, views, templates, admin e relatórios.</p><div class="tip"><strong>Como estudar:</strong> leia o conceito, localize o arquivo indicado, copie os exemplos quando necessário e confira o fluxo completo antes de propor uma alteração.</div></section>${structure}${mapGuide}${importsGuide}${localImportsGuide}${searchGuide}${fieldsGuide}${reverseGuide}${relatedNameGuide}${relationshipChangesGuide}${abstractGuide}${logModelGuide}${managersGuide}${threadLocalGuide}${lpsGuide}${integratedManagersGuide}${saveGuide}${rulePlacementGuide}${uniqueGuide}${lifecycleGuide}${queryMethodsGuide}${decisionGuide}${pitfallsGuide}${formsConceptsGuide}${integratedFormGuide}${viewFlowGuide}${layerFlowGuide}${adminReportsGuide}${integratedFlowsGuide}${avisoPracticeGuide}${templatePartsGuide}${permissionStagesGuide}${compatibleChangeGuide}${presentationFlowGuide}${lazyEvaluationGuide}${nPlusOneCompareGuide}${testsGuide}${reviewGuide}<div class="models-content toc-content">${content}</div></div><button class="toc-float" id="models-toc-toggle" type="button" aria-expanded="false" aria-controls="models-right-toc">Tópicos</button><aside class="right-toc" id="models-right-toc" aria-label="Tópicos da página"><h2>Nesta página</h2><nav></nav></aside></div>`;
+  return `<div class="reading-layout"><div class="reading-main toc-content"><div class="models-content toc-content">${content}</div><nav class="models-module-nav" aria-label="Navegação dos encontros"><button class="btn secondary" data-page="m4">← Encontro 04 · Forms e relatórios</button><button class="btn secondary" data-page="m6">Encontro 06 · Admin →</button></nav></div><button class="toc-float" id="models-toc-toggle" type="button" aria-expanded="false" aria-controls="models-right-toc">Tópicos</button><aside class="right-toc" id="models-right-toc" aria-label="Tópicos da página"><h2>Nesta página</h2><nav></nav></aside></div>`;
 }
 function enhanceFormsIndex() {
   const targets = [
@@ -1270,12 +1282,27 @@ function enhanceRightToc() {
       localStorage.setItem("suapEduToc", open ? "open" : "closed");
     };
   }
-  const headingSelector = content.classList.contains("permissions-content") ? "h2, h3" : "h2, h3, h4";
+  // O Markdown usa âncoras curtas (`#etapa-1`) antes dos títulos. Promova
+  // essas âncoras para o próprio título para que índice e links apontem ao
+  // mesmo elemento e o destaque automático permaneça consistente.
+  content.querySelectorAll('a[id^="etapa-"]').forEach((anchor) => {
+    const heading = anchor.nextElementSibling;
+    if (heading && /^H[2-6]$/.test(heading.tagName)) {
+      heading.id = anchor.id;
+      anchor.remove();
+    }
+  });
+  const headingSelector = content.classList.contains("permissions-content")
+    ? "h2, h3"
+    : content.classList.contains("models-content")
+      ? "h2, h3, h4, h5, h6"
+      : "h2, h3, h4, h5, h6";
   const headings = [...content.querySelectorAll(headingSelector)];
   const used = new Set(headings.map((heading) => heading.id).filter(Boolean));
   headings.forEach((heading, index) => {
     if (!heading.id) {
-      let id = "forms-topic-" + index;
+      const prefix = content.classList.contains("models-content") ? "models-topic-" : "topic-";
+      let id = prefix + index;
       while (used.has(id)) id += "-x";
       heading.id = id;
       used.add(id);
@@ -1302,6 +1329,7 @@ function enhanceRightToc() {
     if (target) {
       setActive(target.id);
       target.scrollIntoView({ behavior: "smooth", block: "start" });
+      history.replaceState(null, "", "#" + target.id);
       if (toggle && window.matchMedia("(max-width: 1180px)").matches) {
         toc.classList.remove("mobile-open");
         toggle.setAttribute("aria-expanded", "false");
@@ -1309,6 +1337,18 @@ function enhanceRightToc() {
       }
     }
   }));
+  // Os links internos do Markdown também usam as âncoras reais das etapas.
+  content.querySelectorAll('a[href^="#"]').forEach((link) => {
+    if (link.closest("#" + toc.id)) return;
+    link.addEventListener("click", (event) => {
+      const target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      event.preventDefault();
+      setActive(target.id);
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      history.replaceState(null, "", "#" + target.id);
+    });
+  });
   const observer = new IntersectionObserver((entries) => {
     const visible = entries
       .filter((entry) => entry.isIntersecting)
@@ -1316,6 +1356,16 @@ function enhanceRightToc() {
     if (visible[0]) setActive(visible[0].target.id);
   }, { rootMargin: "-92px 0px -65% 0px", threshold: 0 });
   headings.forEach((heading) => observer.observe(heading));
+  const activateFromScroll = () => {
+    const visible = headings.filter((heading) => heading.getBoundingClientRect().top <= 124);
+    const current = visible[visible.length - 1];
+    if (current) setActive(current.id);
+  };
+  window.addEventListener("scroll", activateFromScroll, { passive: true });
+  activateFromScroll();
+  const initialId = window.location.hash.slice(1);
+  const initialTarget = initialId && document.getElementById(initialId);
+  if (initialTarget && headings.includes(initialTarget)) setActive(initialTarget.id);
 }
 function modulePage(m) {
   return `<div class="sectionhead"><span class="eyebrow">MÓDULO ${m.num} · ESTUDO GUIADO</span><h1>${m.name}</h1><p>${m.desc}</p><div class="bar"><div style="width:${modulePercent(m)}%"></div></div><span class="muted small">${moduleDone(m)}/${moduleTotal(m)} etapas concluídas</span></div><section class="panel"><h3>Ao terminar este módulo, você será capaz de:</h3><ul>${m.goals.map((g) => `<li>${g}</li>`).join("")}</ul></section>${m.id === "m1" ? module1() : m.id === "m2" ? module2() : m.id === "m3" ? module3() : m.id === "m4" ? module4() : m.id === "m5" ? module5() : m.id === "m6" ? module6() : module4()}${challengeArea(m.id)}${tasks(m)}${quiz(m)}${notesBlock(m.id)}<div class="panel"><h3>Continue seus estudos</h3><button class="btn" data-page="${m.id === "m1" ? "m2" : m.id === "m2" ? "m3" : m.id === "m3" ? "m4" : m.id === "m4" ? "m5" : m.id === "m5" ? "m6" : "roadmap"}">${m.id === "m6" ? "Voltar para a trilha" : m.id === "m5" ? "Ir para o encontro 06" : "Ir para o pr\u00f3ximo m\u00f3dulo"} →</button></div>`;

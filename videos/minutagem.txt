@@ -1,0 +1,75 @@
+
+Encontro 03 - Permissões
+
+0:30 -  Fala inicial (André)
+7:15 -  Dúvida do encontro anterior
+27:15 - Permissões - Introdução
+30:20 - Permissions.yaml
+39:56 - Grupos e Permissões
+42:30 - Aquivo perms.py
+51:11 - Comando sync_permissions
+58:14 - Permissões padrão
+58:34 - Permissões Personalizadas
+1:08:12 - Como as telas checam as permissões
+1:17:40 - Arquivo Menu.yaml
+1:25:29 - Managers
+1:38:34 - Consulta seus Grupos
+1:41:35 - Como analisar demandas de Permissions
+1:48:40 - Exemplos Reais
+1:55:59 - Exemplos de Chamados atendidos
+2:09:25 - Fechamento
+
+Encontro 04 - Forms
+0:00 - Início
+1:54 - Revisão do Fluxo de navegação
+3:30 - O que são Forms?
+3:50 - Form ParticipacaoBancaForm
+5:35 - Arquivo forms.py
+7:20 - Init do Form
+11:17 - Argumentos Posicionais e Argumentos Nomeados
+15:58 - Formulários do tipo FormPlus
+24:30 - Formulários do tipo Forms
+26:15: - Exemplo 01 - EstatisticaTurmaForm
+35:32 - Encontrando Form pela telas
+37:04 - Entendendo os campos e convenções
+39:01 - Exemplo 02: ListarDiarioMatriculaAlunoForm
+52:39 - FormPlus
+54:09 - Exemplo FormPlus - RelatorioHorarioForm
+1:06:50 -  Class Meta
+1:11:52 - Como funciona instance
+1:13:34 - Método is_valid()
+1:15:59 - Exemplo ModeForm - RequisitosComponentesCurricularForm
+1:23:46 - Exemplo ModelFormPlus - 
+1:30:27 - Fluxo Admin e Fluxo Personalizados
+1:34:15 -  Exemplo de Form administrado (MatrizForm)
+1:38:06 - Exemplo de Form Personalizado (ReplicacaoMatrizForm)
+1:48:47 - Métodos da requisição (GET, POST e FILES)
+1:53:26 - Visão geral do Fluxo
+1:57:56 - Model PlanoEnsino
+2:02:36 - Recursos Específicos do SUAP
+2:05:55 - Exemplo real (Model MaterialAula)
+2:06:15 - Atividades Prática 01 - Relatório Ficha de Aluno
+2:31:11 - Atividades Prática 02 - Relatório Listagem de Alunos
+2:58:04 - Encerramento
+
+Encontro 05 - Model
+0:10:00 - Início do encontro
+0:04:20 - Introdução
+0:12:40 - Arquivos models.py
+0:17:22 - Estrutura de Models do Edu
+0:21:50 - O que é Model
+0:25:34 - Arquivo managers.py
+0:29:30 - Atributos/campos dos models
+0:37:00 - Métodos dos models
+0:40:15 - Arquivo apps.py
+0:41:50 - Tabelas do banco de dados
+0:43:38 - Valores possíveis para os campos
+0:44:55 - Chave estrangeira no Model
+0:50:17 - Exclusão de campo com on_delete
+0:56:26 - Relação do models.py com o views.py
+1:05:33 - Managers dos Models
+1:10:16 - QuerySets
+1:20:57 - Relação do Model com Formulários
+1:32:27 - Relação do Model com Template
+1:44:57 - Migrações do Django
+2:17:00 - Finalização

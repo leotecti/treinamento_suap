@@ -1,356 +1,213 @@
-# Encontro - Django Admin no SUAP EDU
+# Encontro - Django Admin no SUAP
 
-## A. Identificação
+## A. Identificacao
 
-**Título:** Django Admin no SUAP: listagens, formulários, filtros, permissões e customizações do `ModelAdminPlus`.
+**Publico-alvo:** novos desenvolvedores do SUAP  
+**Duracao sugerida:** 2h30  
+**Modulo principal:** `edu`  
+**Estudos de caso:** `TurnoAdmin` e `AlunoAdmin`
 
-**Carga horária:** 2 horas.
+> Embora o nome deste arquivo tenha sido mantido conforme o roteiro original,
+> o conteudo deste encontro trata do **Django Admin** e de sua especializacao
+> no SUAP por meio do `ModelAdminPlus`.
 
-**Objetivo geral:** compreender como o Django Admin gera interfaces administrativas a partir dos models e como o SUAP amplia esse mecanismo por meio do `ModelAdminPlus`, forms, managers, permissões, abas, ações, exportações e inlines.
+## B. Objetivos
 
-**Objetivos específicos:**
+Ao final do encontro, o estudante devera ser capaz de:
 
-- compreender a finalidade e os limites do Django Admin;
-- entender como um model é registrado em `admin.site`;
-- reconhecer as URLs geradas automaticamente pelo Admin;
-- diferenciar `ModelAdmin` do Django e `ModelAdminPlus` do DJTools;
-- configurar listagem, busca, filtros, ordenação e paginação;
-- criar colunas calculadas com métodos do admin;
-- organizar telas de cadastro e edição com `form` e `fieldsets`;
-- compreender o ciclo de `changelist`, `add`, `change` e `delete`;
-- restringir registros com `get_queryset()` e managers locais;
-- aplicar permissões gerais e contextuais no backend;
-- conhecer actions, inlines, tabs, exportação e URLs personalizadas;
-- identificar riscos de segurança e desempenho no Admin;
-- alterar um admin existente de forma controlada e testável.
+- explicar o papel do Django Admin e do `ModelAdmin`;
+- localizar a rota geral, o registro do model e sua classe administrativa;
+- reconhecer o padrao das URLs administrativas;
+- diferenciar `ModelAdmin` de `ModelAdminPlus`;
+- configurar colunas, links, busca, filtros, ordenacao e paginacao;
+- reconhecer recursos exclusivos do DJTools/SUAP;
+- decidir quando usar o formulario automatico ou um `ModelForm` personalizado.
 
-**Pré-requisitos:** models, managers, `QuerySet`, forms, permissões, fluxo HTTP e leitura básica de templates.
+## C. Roteiro sugerido
 
-> **Escopo do encontro:** o objetivo não é estudar todos os métodos de `ModelAdmin`. O estudo prioriza os recursos mais usados por novos desenvolvedores no módulo EDU. Recursos complexos podem ser aprofundados conforme a necessidade do projeto.
+| Etapa | Conteudo | Tempo |
+|---|---|---:|
+| 1 | Conceito, componentes e CRUD administrativo | 25 min |
+| 2 | URLs, fluxo interno e registro de models | 30 min |
+| 3 | Exemplo simples com `TurnoAdmin` | 20 min |
+| 4 | Configuracoes de listagem com `AlunoAdmin` | 55 min |
+| 5 | Recursos do `ModelAdminPlus` | 15 min |
+| 6 | Formulario automatico x `AlunoForm` e revisao | 25 min |
 
-## B. Ideia central do encontro
+---
 
-O Django Admin é uma interface administrativa gerada a partir dos models. O
-desenvolvedor registra um model e configura uma classe de admin; o framework
-fornece URLs, listagem, formulario, validacao, persistencia e verificacoes de
-permissao.
+## Etapa 1 - Fundamentos
 
-Uma forma de visualizar a relação entre os componentes:
+### 1. O que e o Django Admin
 
-```text
-Model = cadastro e regras da entidade
-ModelAdmin = configuracao da mesa de trabalho desse cadastro
-AdminSite = setor que recebe e encaminha as operacoes administrativas
-Form = ficha usada para cadastrar ou editar
-QuerySet = conjunto de registros que o usuario pode consultar
-```
+O **Django Admin** e uma aplicacao administrativa fornecida pelo proprio
+Django. Ele usa os metadados dos models e as configuracoes de classes
+`ModelAdmin` para gerar telas internas de consulta e manutencao de dados.
 
-Fluxo da listagem:
-
-```text
-Usuario acessa /admin/edu/aluno/
-        |
-AdminSite encontra AlunoAdmin
-        |
-verifica permissao de visualizacao
-        |
-AlunoAdmin.get_queryset(request)
-        |
-aplica busca, filtros, aba e ordenacao
-        |
-executa a consulta no banco
-        |
-change_list.html apresenta os resultados
-```
-
-Fluxo da edicao:
+No SUAP analisado, a versao do framework esta declarada em
+`requirements/base.txt:1-2`:
 
 ```text
-Usuario acessa /admin/edu/aluno/<pk>/change/
-        |
-AdminSite encontra AlunoAdmin e o objeto
-        |
-has_change_permission(request, obj)
-        |
-get_form() / AlunoForm
-        |
-GET: apresenta valores atuais
-POST: recebe e valida os dados
-        |
-form.is_valid()
-        |
-save_model() e save_related()
-        |
-response_change()
-```
-
-Ponto-chave:
-
-```text
-admin.py nao cria a tabela e nao substitui o model.
-Ele configura a interface administrativa usada para consultar e manipular o model.
-```
-
-## C. Mapa de estudo
-
-| Tempo | Etapa | Conteudo | Estrategia | Referencias principais |
-|---:|---:|---|---|---|
-| 10 min | 1 | Conceito, registro e URLs | Relacionar model, registro e tela | `edu/admin.py:203-232`; `edu/admin.py:320-327` |
-| 15 min | 2 | Configurações nativas | Estudar `list_display`, `search_fields`, `list_filter`, `ordering` e `fieldsets` | `edu/admin.py:320-353`; `edu/admin.py:374-390` |
-| 15 min | 3 | `ModelAdminPlus` | Comparar Django e DJTools | `djtools/contrib/admin/options/__init__.py:87-154` |
-| 25 min | 4 | Estudo integrado de `AlunoAdmin` | Acompanhar listagem, busca, filtros, abas, form e queryset | `edu/admin.py:1601-1870` |
-| 15 min | 5 | Permissões e escopo dos dados | Analisar `has_*_permission()`, `objects`, `locals` e acesso direto | `edu/admin.py:1617-1626`; `djtools/contrib/admin/options/__init__.py:295-308` |
-| 15 min | 6 | Actions, inlines, hooks e desempenho | Estudar exemplos selecionados da API | `edu/admin.py:356-390`; `edu/admin.py:725-730`; `edu/admin.py:1053-1083` |
-| 20 min | 7 | Prática de estudo | Alterar colunas, filtros e queryset em um ambiente de treinamento | `AlunoAdmin` e `TurnoAdmin` |
-| 5 min | 8 | Testes, revisão e fechamento | Aplicar o checklist e revisar responsabilidades | Secoes finais |
-
-**Duração prevista:** 2 horas, incluindo atividades e revisão.
-
-> As explicações detalhadas formam o material de estudo. A sequência pode ser
-> acompanhada integralmente, com consulta aos exemplos conforme a necessidade.
-
-### Navegação rápida
-
-1. [Etapa 1 — Fundamentos e registro](#etapa-1)
-2. [Etapa 2 — Configurações essenciais](#etapa-2)
-3. [Etapa 3 — Recursos do SUAP](#etapa-3)
-4. [Etapa 4 — Estudo integrado de AlunoAdmin](#etapa-4)
-5. [Etapa 5 — Formulários, permissões e escopo](#etapa-5)
-6. [Etapa 6 — Actions, inlines e hooks](#etapa-6)
-7. [Etapa 7 — Práticas de estudo](#etapa-7)
-8. [Etapa 8 — Testes e fechamento](#etapa-8)
-
-<a id="etapa-1"></a>
-
-## Etapa 1 — Fundamentos e registro
-
-### 1.1. O que é o Django Admin
-
-O Django Admin e uma aplicacao nativa do Django voltada para operacoes internas
-de administracao. Ele le os metadados de um model, combina-os com uma classe
-`ModelAdmin` e monta uma interface web para pessoas autorizadas consultarem e
-manterem os registros.
-
-No projeto, a versao utilizada esta declarada em
-`requirements/base.txt:2`:
-
-```text
+# Core Django
 Django==4.1.5
 ```
 
-As duas classes centrais do recurso pertencem ao proprio Django:
+O Admin nao e o banco de dados e tambem nao substitui o model. Ele e uma
+interface web que coordena:
 
-| Classe | Implementacao no Django 4.1.5 | Responsabilidade |
+```text
+model + ModelAdmin + usuario/permissoes
+                    |
+                    v
+       listagem, formularios e operacoes
+```
+
+Uma analogia util e pensar no model como a definicao da ficha de cadastro e no
+`ModelAdmin` como a configuracao do balcao interno: quais campos aparecem,
+quem pode operar, como pesquisar e como organizar os registros.
+
+As classes centrais pertencem ao Django instalado, nao ao repositorio SUAP:
+
+| Classe | Codigo do Django 4.1.5 | Papel |
 |---|---|---|
-| `AdminSite` | `django/contrib/admin/sites.py:39-318` | Mantem o registro dos models e monta as URLs globais do Admin |
-| `ModelAdmin` | `django/contrib/admin/options.py:612-715` | Configura e executa as telas administrativas de um model |
+| `AdminSite` | `django/contrib/admin/sites.py:39-318` | Registra models e publica as URLs gerais |
+| `ModelAdmin` | `django/contrib/admin/options.py:612-715` | Configura e executa as telas de um model |
+| `ChangeList` | `django/contrib/admin/views/main.py` | Processa a listagem, busca, filtros, ordem e paginacao |
 
-O diretorio `django/` nao faz parte do repositorio do SUAP. Ele pertence ao
-pacote Django instalado no ambiente Python. Por isso, esses caminhos devem ser
-lidos no ambiente virtual, na IDE ou no codigo-fonte da versao `4.1.5`.
+O diretorio `django/` normalmente fica no ambiente Python (`site-packages`),
+por isso nao aparece como pasta dentro do projeto SUAP.
 
-#### 1.1.1. `AdminSite`: o catálogo do Admin
+### 1.1. O que e `ModelAdmin`
 
-Ao executar `admin.site.register()`, o model e sua classe administrativa sao
-armazenados no dicionario `_registry` do `AdminSite`.
+`ModelAdmin` e a classe que descreve **como um model sera administrado**. Uma
+instancia dela recebe o model e o `AdminSite`, cria as URLs do cadastro e
+coordena listagem, inclusao, edicao, exclusao, historico, actions e permissoes.
 
-**Implementacao do Django:** `django/contrib/admin/sites.py:72-77` e
-`django/contrib/admin/sites.py:100-145`
-
-Versao reduzida para estudo:
+O metodo nativo `ModelAdmin.get_urls()`, em
+`django/contrib/admin/options.py:681-709`, produz rotas equivalentes a:
 
 ```python
-class AdminSite:
-    def __init__(self, name='admin'):
-        self._registry = {}
-
-    def register(self, model_or_iterable, admin_class=None, **options):
-        admin_class = admin_class or ModelAdmin
-        if isinstance(model_or_iterable, ModelBase):
-            model_or_iterable = [model_or_iterable]
-        for model in model_or_iterable:
-            # O codigo real tambem valida o model e o registro duplicado.
-            self._registry[model] = admin_class(model, self)
+path('', wrap(self.changelist_view), ...)                 # listagem
+path('add/', wrap(self.add_view), ...)                    # inclusao
+path('<path:object_id>/history/', wrap(self.history_view), ...)
+path('<path:object_id>/delete/', wrap(self.delete_view), ...)
+path('<path:object_id>/change/', wrap(self.change_view), ...)
 ```
 
-O metodo real tambem rejeita models abstratos e lanca
-`AlreadyRegistered` quando o mesmo model e registrado novamente. Depois,
-`AdminSite.get_urls()` percorre esse registro e cria um prefixo para cada
-model.
+#### Exemplo real comentado linha a linha
 
-**Implementacao do Django:** `django/contrib/admin/sites.py:290-318`
+**Arquivo:** `edu/admin.py`  
+**Linhas:** `320-328`
 
 ```python
-for model, model_admin in self._registry.items():
-    urlpatterns += [
-        path(
-            '%s/%s/' % (model._meta.app_label, model._meta.model_name),
-            include(model_admin.urls),
-        ),
-    ]
-```
-
-Assim, um model com `app_label = 'edu'` e `model_name = 'turno'` recebe o
-prefixo `/admin/edu/turno/`.
-
-#### 1.1.2. `ModelAdmin`: o controlador de um model
-
-`ModelAdmin` concentra as configuracoes e as views que administram um model.
-Sua implementacao declara valores padrao como `list_display`,
-`list_select_related`, `list_editable`, `search_fields` e `date_hierarchy`.
-
-**Implementacao do Django:** `django/contrib/admin/options.py:612-630`
-
-O metodo `ModelAdmin.get_urls()` cria as operacoes do model:
-
-**Implementacao do Django:** `django/contrib/admin/options.py:681-709`
-
-```python
-return [
-    path('', wrap(self.changelist_view), name='%s_%s_changelist' % info),
-    path('add/', wrap(self.add_view), name='%s_%s_add' % info),
-    path('<path:object_id>/history/', wrap(self.history_view), ...),
-    path('<path:object_id>/delete/', wrap(self.delete_view), ...),
-    path('<path:object_id>/change/', wrap(self.change_view), ...),
-]
-```
-
-O `wrap()` passa cada view por `AdminSite.admin_view()`. Essa camada verifica,
-entre outros pontos, se o usuario esta ativo e possui acesso administrativo.
-Cada operacao ainda consulta as permissoes do model, como `view`, `add`,
-`change` e `delete`.
-
-A listagem e coordenada por `changelist_view`. O metodo
-`get_changelist_instance()` entrega as configuracoes do `ModelAdmin` para um
-objeto `ChangeList`.
-
-**Implementacao do Django:** `django/contrib/admin/options.py:822-849`
-
-#### 1.1.3. O que o Admin gera
-
-A partir dessas classes, o Django pode gerar:
-
-- listagem de registros;
-- busca e filtros;
-- formulario de inclusao;
-- formulario de edicao;
-- exclusao e historico;
-- actions aplicadas a varios registros;
-- verificacoes das permissoes `view`, `add`, `change` e `delete`.
-
-#### 1.1.4. Django Admin x CRUD comum
-
-CRUD significa criar, consultar, alterar e excluir dados. Tanto o Admin quanto
-uma tela personalizada podem implementar essas operacoes, mas nao sao a mesma
-coisa.
-
-| Django Admin | CRUD com URL, view e template proprios |
-|---|---|
-| As URLs sao geradas por `AdminSite` e `ModelAdmin` | Cada URL e declarada pela aplicacao |
-| O formulario pode ser inferido do model | O desenvolvedor escolhe e coordena o form |
-| Usa templates administrativos padronizados | A interface e desenhada para o fluxo especifico |
-| Integra permissoes de model e historico | A autorizacao e o historico precisam ser definidos pelo fluxo |
-| E voltado a usuarios internos autorizados | Pode atender aluno, professor, publico externo ou integracoes |
-| E excelente para manutencao orientada a dados | E adequado a processos e regras de negocio especificos |
-
-O Admin e, portanto, uma implementacao pronta de CRUD administrativo, e nao
-uma obrigacao para todo CRUD do sistema. Use uma view propria quando o fluxo
-exigir, por exemplo:
-
-- uma sequencia de etapas muito especifica;
-- uma experiencia destinada ao aluno ou ao publico externo;
-- resposta em PDF, planilha ou API com regras proprias;
-- operacao que combina varias entidades e confirmacoes;
-- layout que nao se adapta ao modelo de listagem e formulario do Admin.
-
-#### 1.1.5. Exemplo completo: cadastro de turnos
-
-O cadastro de `Turno` permite acompanhar o fluxo completo com poucas linhas.
-
-**Model:** `edu/models/cadastros_gerais.py:345-363`
-
-```python
-class Turno(LogModel):
-    # Campo persistido e apresentado no formulario gerado pelo Admin.
-    descricao = models.CharFieldPlus('Descricao', unique=True)
-
-    class Meta:
-        verbose_name = 'Turno'
-        verbose_name_plural = 'Turnos'
-        ordering = ('id',)
-
-    def __str__(self):
-        # Representacao usada em selects, mensagens e relacionamentos.
-        return self.descricao
-```
-
-**Configuracao e registro:** `edu/admin.py:320-328`
-
-```python
+# Define a configuracao administrativa do model Turno.
 class TurnoAdmin(ModelAdminPlus):
-    # Colunas exibidas em /admin/edu/turno/.
+    # Exibe o identificador e a descricao como colunas da listagem.
     list_display = ('id', 'descricao')
-    # Ordenacao inicial da listagem.
+
+    # Ordena inicialmente os registros pela descricao.
     ordering = ('descricao',)
-    # Campo consultado pela caixa de pesquisa.
+
+    # Faz a caixa de busca pesquisar no campo descricao.
     search_fields = ('descricao',)
-    # Customizacoes oferecidas pelo DJTools/SUAP.
+
+    # Nao acrescenta a coluna de icones criada pelo SUAP.
     list_display_icons = False
+
+    # Habilita a exportacao da listagem para XLS.
     export_to_xls = True
 
 
-# Associa o model a sua configuracao no AdminSite.
+# Associa o model Turno a configuracao TurnoAdmin no AdminSite padrao.
 admin.site.register(Turno, TurnoAdmin)
 ```
 
-`ModelAdminPlus`, implementado em
-`djtools/contrib/admin/options/__init__.py:87-146`, herda de
-`django.contrib.admin.ModelAdmin`. Portanto, preserva o funcionamento nativo e
-acrescenta recursos do SUAP, como exportacao, abas e templates proprios.
+O model correspondente esta em `edu/models/cadastros_gerais.py:345-363`.
+Se `TurnoAdmin` herdasse diretamente de `admin.ModelAdmin`, as tres primeiras
+opcoes continuariam funcionando; `list_display_icons` e `export_to_xls`,
+entretanto, nao existiriam.
 
-**Como acompanhar o exemplo**
+### 1.2. `ModelAdmin` x `ModelAdminPlus`
 
-1. Acesse `/admin/edu/turno/` para abrir a listagem.
-2. Observe as colunas `ID` e `Descricao`, definidas por `list_display`.
-3. Pesquise parte de uma descricao para exercitar `search_fields`.
-4. Acesse `/admin/edu/turno/add/` e observe que o campo `descricao` foi
-   produzido a partir do model.
-5. Salve um registro e abra `/admin/edu/turno/<pk>/change/` para edita-lo.
-6. Compare o formulario exibido com o model: como `TurnoAdmin` nao declarou
-   `form`, o Django cria um `ModelForm` automaticamente.
+`ModelAdmin` e nativo do Django. `ModelAdminPlus` e implementado pelo DJTools,
+a camada de ferramentas do SUAP, em
+`djtools/contrib/admin/options/__init__.py:87-146`:
 
-Essa criacao acontece em `ModelAdmin.get_form()`, implementado em
-`django/contrib/admin/options.py:758-812`. Na linha `807`, o Django chama
-`modelform_factory(self.model, **defaults)` para produzir a classe do
-formulario a partir do model e das opcoes administrativas.
+```python
+class ModelAdminPlus(admin.ModelAdmin, metaclass=MetaModelAdminPlus):
+    change_list_template = 'djtools/templates/adminutils/change_list.html'
+    change_form_template = 'djtools/templates/adminutils/change_form.html'
+    formfield_overrides = FORMFIELD_OVERRIDES
 
-Fluxo resumido da requisicao:
-
-```text
-/admin/edu/turno/
-        |
-        v
-suap/urls.py -> admin.site.urls
-        |
-        v
-AdminSite encontra Turno em _registry
-        |
-        v
-TurnoAdmin.changelist_view()
-        |
-        v
-ChangeList consulta Turno e monta a listagem
-        |
-        v
-template administrativo -> resposta HTML
+    list_display_icons = False
+    export_to_xls = False
+    export_to_sophia = False
+    list_filter_autocomplete_form_filters = None
+    avoid_short_search = True
+    filters_ajax = True
 ```
 
-Esse exemplo mostra a divisao de responsabilidades: o model descreve os dados,
-`TurnoAdmin` configura a interface e `AdminSite` registra e publica as URLs.
+A declaracao mostra que o SUAP **especializa**, mas nao substitui, o Admin:
 
-### 1.2. Onde nasce o prefixo `/admin/`
+- `admin.ModelAdmin` fornece o CRUD administrativo nativo;
+- `MetaModelAdminPlus`, em `djtools/lps.py:44-64`, permite customizacoes LPS;
+- os templates do DJTools adaptam a interface;
+- novos atributos habilitam icones, exportacoes, tabs e filtros;
+- metodos sobrescritos integram `ChangeListPlus`, request e transacoes.
 
-O ponto de entrada do Admin esta no arquivo geral de URLs.
+| Recurso | `ModelAdmin` | `ModelAdminPlus` |
+|---|---:|---:|
+| Listagem, forms, permissoes e historico | Sim | Sim, por heranca |
+| `list_display`, `search_fields`, `list_filter` | Sim | Sim, por heranca |
+| Templates administrativos do SUAP | Nao | Sim |
+| Coluna padrao de icones | Nao | `list_display_icons` |
+| Exportacao XLS | Nao | `export_to_xls` |
+| Exportacao Sophia desta instalacao | Nao | `export_to_sophia` |
+| Filtros relacionados com autocomplete | Nao | Sim |
+| Customizacao por LPS | Nao | `MetaModelAdminPlus` |
+
+### 1.3. O que o Admin gera
+
+| Recurso | O que acontece |
+|---|---|
+| Listagem | O `ChangeList` consulta o model e monta uma tabela paginada |
+| Busca e filtros | Parametros GET sao convertidos em operacoes de `QuerySet` |
+| Inclusao | Um `ModelForm` vazio e apresentado e salvo apos validacao |
+| Edicao | O formulario recebe a instancia localizada pela chave primaria |
+| Exclusao | Dependencias sao apresentadas antes da confirmacao |
+| Historico | Alteracoes administrativas registradas podem ser consultadas |
+| Actions | Uma operacao pode receber varios objetos selecionados |
+| Permissoes | Cada fluxo verifica `view`, `add`, `change` ou `delete` |
+
+As permissoes controlam a operacao, mas nao necessariamente o escopo dos
+dados. No `AlunoAdmin`, por exemplo, o queryset e restringido com
+`Aluno.locals` em `edu/admin.py:1625-1626`.
+
+### 1.4. Django Admin x CRUD comum
+
+CRUD significa criar, consultar, alterar e excluir. O Admin e um CRUD interno
+gerado pelo framework; uma tela comum e construida pelo projeto para um fluxo
+especifico.
+
+| Aspecto | Django Admin | CRUD comum |
+|---|---|---|
+| URLs | Geradas por `AdminSite`/`ModelAdmin` | Declaradas em `urls.py` |
+| View | Metodos do `ModelAdmin` | Funcao ou classe em `views.py` |
+| Form | Inferido do model ou configurado | Escolhido explicitamente pela view |
+| Template | Padrao administrativo | Proprio do caso de uso |
+| Permissoes | Integracao com permissoes de model | Regra definida no fluxo |
+| Publico | Equipe interna autorizada | Pode atender qualquer perfil |
+| Melhor uso | Manutencao orientada a dados | Processos e experiencias especificas |
+
+Use o Admin para cadastros internos e operacoes padronizadas. Prefira uma view
+propria quando houver etapas, regras de negocio, PDF, API, interface para aluno
+ou outro fluxo que nao se ajuste ao cadastro administrativo.
+
+---
+
+## Etapa 2 - URLs e registro
+
+### 2. Onde nasce o prefixo `/admin/`
 
 **Arquivo:** `suap/urls.py`  
 **Linha:** `60`
@@ -359,98 +216,153 @@ O ponto de entrada do Admin esta no arquivo geral de URLs.
 path('admin/', admin.site.urls),
 ```
 
-Essa unica linha inclui as URLs produzidas por todos os models registrados no
-`AdminSite`. Por isso nao existe uma linha em `edu/urls.py` para cada tela
-administrativa.
+- `'admin/'` e o prefixo reconhecido pelo resolvedor principal do Django;
+- `admin.site` e a instancia padrao de `AdminSite`;
+- `.urls` devolve as rotas administrativas construidas pelo `AdminSite`;
+- uma unica linha inclui as URLs de todos os models registrados.
 
-#### 1.2.1. Fluxo `admin.site.urls` -> `AdminSite` -> `ModelAdmin`
+Por isso nao existe em `edu/urls.py` uma rota para cada cadastro do Admin.
 
-`admin.site` e a instancia padrao de `AdminSite`. Quando o Django avalia
-`admin.site.urls`, a propriedade `urls` chama `AdminSite.get_urls()`. Esse
-metodo constroi as URLs gerais e percorre o registro interno de models:
+#### 2.0.1. E possivel trocar o prefixo `/admin/`?
 
-```text
-suap/urls.py
-path('admin/', admin.site.urls)
-                |
-                v
-AdminSite.get_urls()
-                |
-                +-- /admin/                         -> pagina inicial
-                +-- /admin/login/                   -> autenticacao
-                +-- /admin/<app>/<model>/           -> ModelAdmin do model
+Sim. O texto informado no primeiro argumento de `path()` determina o prefixo
+externo usado para acessar o Admin. Para trocar `/admin/` por `/gestao/`, por
+exemplo, altere `suap/urls.py:60`:
+
+```python
+# Antes
+path('admin/', admin.site.urls),
+
+# Depois
+path('gestao/', admin.site.urls),
 ```
 
-Para cada par registrado em `AdminSite._registry`, o Django inclui as URLs da
-instancia de `ModelAdmin` correspondente. A forma reduzida do codigo de
-`django/contrib/admin/sites.py:290-318` e:
+Depois da alteracao, uma URL como:
+
+```text
+/admin/edu/aluno/
+```
+
+passa a ser acessada em:
+
+```text
+/gestao/edu/aluno/
+```
+
+Nesta instalacao, tambem existe uma rota explicita para o login administrativo
+em `suap/urls.py:59`. Ela deve acompanhar o novo prefixo:
+
+```python
+urlpatterns += [
+    path('accounts/logout/', views.logout_then_login),
+    path('accounts/login/', comum_views.login),
+    path('gestao/login/', comum_views.login),
+    path('gestao/', admin.site.urls),
+]
+```
+
+Os nomes usados pelo resolvedor reverso nao precisam ser alterados:
+
+```python
+reverse('admin:edu_aluno_changelist')
+```
+
+Nesse codigo, `admin` e o **namespace** do `AdminSite`, e nao o prefixo externo.
+Depois da mudanca, o `reverse()` passa a produzir `/gestao/edu/aluno/`.
+
+Antes de fazer a troca em uma instalacao existente, procure links escritos
+diretamente com o prefixo antigo:
+
+```bash
+rg "['\"]\/admin\/" .
+```
+
+URLs construidas com `reverse()` ou com a tag `{% url %}` acompanham a nova
+configuracao automaticamente. Links fixos como `href="/admin/..."`, testes e
+integracoes externas precisam ser revisados manualmente.
+
+> Trocar o prefixo pode atender a uma convencao de navegacao, mas nao substitui
+> autenticacao e permissoes. Um endereco menos previsivel nao constitui uma
+> barreira de seguranca.
+
+### 2.1. O que e `admin.site.urls`
+
+Ao acessar a propriedade `urls`, o Django chama `AdminSite.get_urls()`. Esse
+metodo cria as rotas gerais e percorre o dicionario interno `_registry`, no
+qual estao os pares `model -> ModelAdmin`.
+
+Forma reduzida de `django/contrib/admin/sites.py:290-318`:
 
 ```python
 for model, model_admin in self._registry.items():
     urlpatterns += [
         path(
-            '%s/%s/' % (
-                model._meta.app_label,
-                model._meta.model_name,
-            ),
+            f'{model._meta.app_label}/{model._meta.model_name}/',
             include(model_admin.urls),
-        ),
+        )
     ]
 ```
 
-No caso de `Turno`, o registro realizado em `edu/admin.py:327` associa:
-
-```text
-model:       Turno
-app_label:   edu
-model_name:  turno
-admin:       TurnoAdmin
-prefixo:     /admin/edu/turno/
-```
-
-Depois, `ModelAdmin.get_urls()`, em
-`django/contrib/admin/options.py:681-709`, acrescenta as operacoes desse
-model:
-
-```python
-path('', self.changelist_view, ...)                    # listagem
-path('add/', self.add_view, ...)                       # inclusao
-path('<path:object_id>/change/', self.change_view, ...) # edicao
-path('<path:object_id>/delete/', self.delete_view, ...) # exclusao
-path('<path:object_id>/history/', self.history_view, ...) # historico
-```
-
-As views acima sao metodos da instancia de `TurnoAdmin`; nao sao views
-declaradas em `edu/views.py`. Antes de executa-las, `AdminSite.admin_view()`
-aplica verificacoes administrativas, protecao contra cache e protecao CSRF.
-Em seguida, cada operacao consulta as permissoes especificas do model.
-
-Fluxo completo de uma listagem:
+### 2.2. Fluxo `admin.site.urls -> AdminSite -> ModelAdmin`
 
 ```text
 GET /admin/edu/turno/
-  -> resolver principal encontra path('admin/', admin.site.urls)
-  -> AdminSite encontra edu/turno no _registry
+  -> suap/urls.py encontra o prefixo admin/
+  -> AdminSite procura edu/turno em _registry
+  -> encontra a instancia de TurnoAdmin
   -> TurnoAdmin.changelist_view(request)
-  -> TurnoAdmin.get_queryset(request)
-  -> ChangeList aplica busca, filtros, ordenacao e paginacao
-  -> template do Admin gera a resposta
+  -> get_queryset(), busca, filtros, ordem e paginacao
+  -> template administrativo
+  -> HttpResponse
 ```
 
-Os nomes reversos tambem sao gerados automaticamente. Para o exemplo:
+Antes de chamar as views, `AdminSite.admin_view()` protege o acesso
+administrativo. A operacao concreta ainda consulta os metodos de permissao do
+`ModelAdmin`, como `has_view_permission()` e `has_change_permission()`.
+
+#### 2.2.1. Onde o Django cria as URLs e views do Admin
+
+As URLs administrativas nao ficam declaradas em `edu/urls.py`, e suas views
+nao ficam em `edu/views.py`. O Django as constroi dinamicamente a partir dos
+models registrados:
+
+1. `AdminSite.get_urls()`, em `django/contrib/admin/sites.py:290-318`, percorre
+   o registro interno e cria `/admin/<app_label>/<model_name>/`;
+2. `ModelAdmin.get_urls()`, em `django/contrib/admin/options.py:681-709`, cria
+   as rotas de listagem, inclusao, edicao, exclusao e historico;
+3. essas rotas apontam para metodos como `changelist_view()`, `add_view()`,
+   `change_view()`, `delete_view()` e `history_view()`.
+
+Assim, `/admin/edu/aluno/` executa `AlunoAdmin.changelist_view()`, enquanto
+`/admin/edu/aluno/10/change/` executa `AlunoAdmin.change_view()` para a chave
+primaria `10`. Como `AlunoAdmin` herda de `ModelAdminPlus`, o fluxo passa pelas
+customizacoes de `djtools/contrib/admin/options/__init__.py` e depois pela
+implementacao nativa de `ModelAdmin`.
+
+O codigo instalado do Django pode ser localizado e consultado com:
+
+```bash
+python -c "import django.contrib.admin.sites as m; print(m.__file__)"
+python -c "import django.contrib.admin.options as m; print(m.__file__)"
+python manage.py show_urls | grep '/admin/edu/aluno'
+```
+
+Tambem e possivel abrir o shell e exibir a implementacao de um metodo:
 
 ```python
-reverse('admin:edu_turno_changelist')  # /admin/edu/turno/
-reverse('admin:edu_turno_add')         # /admin/edu/turno/add/
-reverse('admin:edu_turno_change', args=[3])
+import inspect
+from django.contrib.admin import ModelAdmin
+
+print(inspect.getsource(ModelAdmin.get_urls))
+print(inspect.getsource(ModelAdmin.changelist_view))
 ```
 
-Isso explica por que registrar um model e suficiente para criar todo o
-conjunto basico de URLs administrativas.
+> O diretorio `django/` pertence ao pacote instalado no ambiente virtual ou no
+> container. Ele nao e uma pasta do codigo-fonte do SUAP.
 
-Padrao dos enderecos:
+### 2.3. Padrao dos enderecos
 
-| Operacao | URL |
+| Operacao | Padrao |
 |---|---|
 | Listar | `/admin/<app_label>/<model_name>/` |
 | Adicionar | `/admin/<app_label>/<model_name>/add/` |
@@ -458,7 +370,7 @@ Padrao dos enderecos:
 | Excluir | `/admin/<app_label>/<model_name>/<pk>/delete/` |
 | Historico | `/admin/<app_label>/<model_name>/<pk>/history/` |
 
-Exemplos do EDU:
+Exemplos para demonstracao:
 
 ```text
 /admin/edu/turno/
@@ -468,24 +380,38 @@ Exemplos do EDU:
 /admin/edu/aluno/95812/change/
 ```
 
-`edu` e o `app_label`; `turno` e `aluno` sao os nomes internos dos models em
-minusculas. O numero da URL de edicao e a chave primaria, nao necessariamente a
-matricula ou outro codigo de negocio.
+`edu` e o `app_label`; `turno` e `aluno` sao os `model_name`; o numero e a
+chave primaria, que pode ser diferente da matricula ou de outro codigo de
+negocio.
 
-### 1.3. Registro do model
+### 2.4. Registro do model
 
-Para o Admin conhecer um model, ele deve ser registrado. O formato tradicional
-usado no EDU e:
+O registro liga um model a uma configuracao administrativa:
 
 ```python
-admin.site.register(Model, ModelAdmin)
+admin.site.register(Turno, TurnoAdmin)
 ```
 
-Durante a inicializacao, a aplicacao `django.contrib.admin` procura os modulos
-`admin.py` das aplicacoes instaladas. Ao importar `edu/admin.py`, as chamadas a
-`admin.site.register()` adicionam os models ao `AdminSite`.
+No exemplo real, ele esta em `edu/admin.py:328`. O registro de `Aluno` esta em
+`edu/admin.py:1870`:
 
-O Django tambem oferece a sintaxe com decorador:
+```python
+admin.site.register(Aluno, AlunoAdmin)
+```
+
+Durante a inicializacao, o Django importa os arquivos `admin.py` das
+aplicacoes instaladas. `AdminSite.register()` instancia a classe de admin e
+guarda a associacao em `_registry`.
+
+Sem o registro:
+
+- o model continua existindo no ORM e no banco;
+- migrations, managers, forms e views continuam funcionando;
+- ele nao aparece no indice do Admin;
+- suas URLs administrativas nao sao criadas;
+- acessar `/admin/edu/<model>/` resulta em rota inexistente.
+
+O Django tambem aceita a forma equivalente com decorador:
 
 ```python
 @admin.register(Turno)
@@ -493,3460 +419,702 @@ class TurnoAdmin(ModelAdminPlus):
     ...
 ```
 
-As duas formas registram a mesma associacao. Neste material sera preservado o
-formato predominante no arquivo `edu/admin.py`.
+O EDU usa predominantemente a chamada explicita `admin.site.register()`.
 
-Exemplo real:
+### 2.5. O indice do Admin
 
-**Arquivo:** `edu/admin.py`  
-**Linhas:** `320-327`
-
-```python
-class TurnoAdmin(ModelAdminPlus):
-    list_display = ('id', 'descricao')
-    ordering = ('descricao',)
-    search_fields = ('descricao',)
-    list_display_icons = False
-    export_to_xls = True
-
-
-admin.site.register(Turno, TurnoAdmin)
-```
-
-Leitura linha a linha:
-
-- `TurnoAdmin` descreve como o model sera administrado;
-- `ModelAdminPlus` e a classe-base do DJTools;
-- `list_display` escolhe as colunas da listagem;
-- `ordering` define a ordenacao inicial;
-- `search_fields` define onde a caixa de pesquisa procura;
-- `list_display_icons` e `export_to_xls` sao recursos do SUAP;
-- `admin.site.register()` liga o model `Turno` a essa configuracao.
-
-O model correspondente esta em `edu/models/cadastros_gerais.py:345-363`:
-
-```python
-class Turno(LogModel):
-    descricao = models.CharFieldPlus('Descricao', unique=True)
-
-    class Meta:
-        verbose_name = 'Turno'
-        verbose_name_plural = 'Turnos'
-        ordering = ('id',)
-
-    def __str__(self):
-        return self.descricao
-```
-
-O Admin usa informacoes do model:
-
-- `verbose_name` e `verbose_name_plural` ajudam a nomear as telas;
-- os campos determinam o formulario padrao;
-- `__str__()` representa o objeto em selects e mensagens;
-- tipos, obrigatoriedade e validadores participam do formulario.
-
-### 1.4. Reutilizacao de uma classe de admin
-
-O EDU registra varios models simples com a mesma configuracao.
-
-**Arquivo:** `edu/admin.py`  
-**Linhas:** `203-232`
-
-```python
-class SomenteDescricaoModelAdmin(ModelAdminPlus):
-    list_display = ('descricao',)
-    ordering = ('descricao',)
-    search_fields = ('descricao',)
-    list_display_icons = True
-    export_to_xls = True
-
-
-for cls in (
-    NaturezaParticipacao,
-    Convenio,
-    Nucleo,
-    TipoProfessorDiario,
-    # ... outros models com o mesmo formato ...
-):
-    admin.site.register(cls, SomenteDescricaoModelAdmin)
-```
-
-Essa reutilizacao e adequada porque os models possuem uma necessidade
-administrativa equivalente. Nao se deve criar uma classe-base generica apenas
-para reduzir poucas linhas quando as regras e telas forem diferentes.
-
-#### 1.4.1. Exemplo concreto: `NaturezaParticipacao`
-
-Um dos models registrados no laco e `NaturezaParticipacao`. Sua implementacao
-esta em `edu/models/cadastros_gerais.py:330-342`:
-
-```python
-class NaturezaParticipacao(LogModel):
-    descricao = models.CharFieldPlus('Descrição', unique=True)
-
-    class Meta:
-        verbose_name = 'Natureza de Participação'
-        verbose_name_plural = 'Naturezas de Participação'
-        ordering = ('descricao',)
-
-    def __str__(self):
-        return self.descricao
-```
-
-Para abrir sua tela:
+O **indice do Admin** e a pagina inicial acessada em `/admin/`. Ele funciona
+como um catalogo dos models registrados e das operacoes administrativas
+disponiveis para o usuario atual.
 
 ```text
-/admin/edu/naturezaparticipacao/
+GET /admin/
+  -> admin.site.urls
+  -> AdminSite.index(request)
+  -> AdminSite.get_app_list(request)
+  -> template admin/index.html
 ```
 
-Nessa listagem, a classe compartilhada produz:
+O Django percorre o registro interno `AdminSite._registry`, agrupa os models
+por `app_label` e consulta as permissoes de cada `ModelAdmin`. Assim, um model
+so pode aparecer quando foi registrado e o usuario possui uma operacao
+permitida, como visualizar, incluir ou alterar.
 
-- uma coluna `descricao`, por causa de `list_display`;
-- pesquisa pelo mesmo campo, por causa de `search_fields`;
-- ordenacao alfabetica;
-- icones de visualizacao/edicao do `ModelAdminPlus`;
-- exportacao para XLS.
-
-Embora a classe Python seja a mesma, `admin.site.register()` cria uma
-instancia administrativa para cada model. Assim, a instancia associada a
-`NaturezaParticipacao` conhece esse model e gera o prefixo
-`/admin/edu/naturezaparticipacao/`; a instancia associada a `Convenio` gera
-`/admin/edu/convenio/`.
-
-#### 1.4.2. Limites da reutilizacao
-
-`SomenteDescricaoModelAdmin` pressupoe que todos os models registrados possuam
-um campo chamado `descricao`. Ela deixa de ser adequada quando um model
-precisa de comportamento proprio, por exemplo:
-
-- coluna que acessa outro campo ou relacionamento;
-- filtros especificos;
-- form personalizado;
-- queryset limitado por campus ou perfil;
-- permissao contextual;
-- redirect especial depois do salvamento;
-- hooks ou inlines proprios.
-
-Registrar nessa classe um model que possua somente o campo `nome`, por exemplo,
-faria `list_display`, `ordering` e `search_fields` apontarem para um campo
-inexistente. Se as diferencas comecarem a exigir varias condicoes baseadas em
-`self.model`, e preferivel criar outra classe de Admin com responsabilidade
-clara.
-
-<a id="etapa-2"></a>
-
-## Etapa 2 — Configurações essenciais
-
-### 2.1. Configuracoes da listagem
-
-Os atributos abaixo pertencem ao `ModelAdmin` do Django e tambem funcionam no
-`ModelAdminPlus` por heranca. Seus valores padrao podem ser vistos em
-`django/contrib/admin/options.py:612-630`, na implementacao do Django 4.1.5.
-
-Quando a listagem e acessada, `ModelAdmin.get_changelist_instance()` reune
-essas opcoes e as entrega ao objeto `ChangeList`. Esse encadeamento esta em
-`django/contrib/admin/options.py:822-849`.
-
-| Atributo | Valor padrao | Funcao |
-|---|---|---|
-| `list_display` | `('__str__',)` | Define colunas e metodos apresentados |
-| `list_display_links` | `()` | Define quais colunas abrem a edicao |
-| `list_filter` | `()` | Adiciona filtros laterais |
-| `search_fields` | `()` | Define campos consultados pela busca textual |
-| `ordering` | Conforme model | Define ordenacao inicial |
-| `list_per_page` | `100` | Define quantidade por pagina |
-| `list_select_related` | `False` | Antecipa relacionamentos para reduzir consultas |
-| `date_hierarchy` | `None` | Cria navegacao por ano, mes e dia |
-| `list_editable` | `()` | Permite editar campos diretamente na listagem |
-
-### 2.2. Ciclo completo: `changelist`, `ChangeList` e `ChangeListPlus`
-
-Os tres nomes representam partes diferentes da mesma listagem:
-
-| Elemento | Origem | Responsabilidade |
-|---|---|---|
-| `changelist_view()` | Django, sobrescrita pelo `ModelAdminPlus` | recebe a requisicao e coordena permissao, actions, exportacao, contexto e resposta |
-| `ChangeList` | Django | interpreta configuracoes do Admin e monta filtros, busca, ordenacao, paginacao e resultados |
-| `ChangeListPlus` | DJTools/SUAP | herda `ChangeList` e adapta busca, filtros relacionados e ordenacao |
-
-Em outras palavras, **changelist** e o fluxo/tela de listagem;
-`changelist_view()` e a view que o coordena; e `ChangeList` e o objeto que
-representa o estado daquela listagem durante uma requisicao.
-
-#### 2.2.1. Ponto de entrada da listagem
-
-Para `AlunoAdmin`, a URL e:
-
-```text
-/admin/edu/aluno/
-```
-
-`ModelAdmin.get_urls()` associa o caminho vazio do prefixo do model a
-`changelist_view()`. O fluxo inicial e:
-
-```text
-GET /admin/edu/aluno/
-  -> AdminSite encontra AlunoAdmin
-  -> AdminSite.admin_view() aplica a protecao administrativa
-  -> AlunoAdmin.changelist_view(request)
-  -> ModelAdminPlus.changelist_view(request)
-  -> ModelAdmin.changelist_view(request)
-```
-
-O `AlunoAdmin` nao sobrescreve `changelist_view()`. Por herdar de
-`ModelAdminPlus`, usa a implementacao de
-`djtools/contrib/admin/options/__init__.py:348-385`.
-
-Essa implementacao:
-
-1. guarda a requisicao em `self.request`;
-2. configura a chave de ajuda da pagina;
-3. desvia o fluxo para uma tarefa quando ha exportacao;
-4. acrescenta action bar, titulo e breadcrumbs ao contexto;
-5. chama `super().changelist_view()` para executar o ciclo nativo;
-6. trata filtros invalidos;
-7. em uma requisicao AJAX, devolve somente o fragmento principal da pagina.
-
-#### 2.2.2. Como nasce o objeto `ChangeListPlus`
-
-No ciclo nativo, `ModelAdmin.get_changelist_instance()` coleta as
-configuracoes do Admin, como:
-
-```text
-model
-list_display e list_display_links
-list_filter e date_hierarchy
-search_fields
-list_select_related
-list_per_page e list_max_show_all
-list_editable
-ordering e sortable_by
-```
-
-Antes de instanciar o objeto, o Django pergunta qual classe deve usar por meio
-de `get_changelist()`. O `ModelAdminPlus` substitui esse metodo em
-`djtools/contrib/admin/options/__init__.py:200-206`:
+Exemplo do EDU, em `edu/admin.py:1870`:
 
 ```python
-def get_changelist(self, request, **kwargs):
-    self.request = request
-    return ChangeListPlus
-```
-
-Portanto, numa classe nativa de `ModelAdmin`, o resultado normalmente e
-`ChangeList`; numa classe baseada em `ModelAdminPlus`, como `AlunoAdmin`, o
-resultado e `ChangeListPlus`.
-
-```text
-ModelAdmin.get_changelist_instance()
-  -> model_admin.get_changelist(request)
-  -> ChangeListPlus(...configuracoes da listagem...)
-  -> cl
-```
-
-O objeto costuma ser chamado de `cl` no codigo e nos templates.
-
-#### 2.2.3. O que acontece dentro do `ChangeList`
-
-`ChangeListPlus` herda o construtor do `ChangeList`, implementado pelo Django
-em `django/contrib/admin/views/main.py`. Durante a criacao do objeto, o ciclo
-principal e:
-
-```text
-ModelAdmin.get_queryset(request)
-  -> queryset raiz do model
-  -> leitura dos parametros GET
-  -> construcao dos filtros
-  -> aplicacao da busca textual
-  -> select_related(), quando configurado
-  -> ordenacao
-  -> eliminacao de duplicidades, quando necessaria
-  -> contagem e paginacao
-  -> result_list da pagina atual
-```
-
-Os principais estados sao:
-
-| Atributo | Significado |
-|---|---|
-| `cl.root_queryset` | queryset inicial devolvido pelo `ModelAdmin` |
-| `cl.queryset` | queryset depois de filtros, busca e ordenacao |
-| `cl.result_count` | quantidade de registros no resultado filtrado |
-| `cl.full_result_count` | quantidade antes dos filtros da tela, quando calculada |
-| `cl.paginator` | paginador da listagem |
-| `cl.page_num` | pagina solicitada |
-| `cl.result_list` | objetos da pagina que serao renderizados |
-| `cl.filter_specs` | objetos responsaveis pelos filtros visiveis |
-
-O queryset continua preguiçoso durante boa parte da composicao. Consultas sao
-efetivamente executadas quando o Admin calcula contagens, fatia a pagina ou
-percorre `result_list` para renderizar as linhas.
-
-#### 2.2.4. Parametros GET usados por busca, filtros, tabs, paginacao e ordenacao
-
-Os controles da listagem administrativa normalmente nao alteram dados. Eles
-fazem uma nova requisicao `GET` para a mesma URL, acrescentando parametros depois
-do caractere `?`:
-
-```text
-/admin/edu/aluno/?q=Paloma&tab=tab_suap&p=1
-                   \________ parametros GET ________/
-```
-
-No Python, esses valores ficam disponiveis em `request.GET`, um `QueryDict` do
-Django:
-
-```python
-termo = request.GET.get('q')
-tab = request.GET.get('tab')
-```
-
-O `QueryDict` e semelhante a um dicionario, mas aceita mais de um valor para a
-mesma chave. Para filtros de multipla escolha, o SUAP usa
-`request.GET.getlist(...)`, por exemplo em
-`djtools/contrib/admin/filters/__init__.py:15-30`.
-
-Os parametros nao possuem todos a mesma origem:
-
-| Recurso | Parametro comum | Origem | Consumidor principal |
-|---|---|---|---|
-| Busca | `q` | Django Admin | `get_search_results()` |
-| Filtro | nome do lookup, como `situacao__id__exact` | Django Admin/DJTools | `get_filters()` e o filtro correspondente |
-| Tab | `tab` | DJTools/SUAP | `CustomTabListFilter` |
-| Paginacao | `p` | Django Admin | paginador do `ChangeList` |
-| Ordenacao | `o` | Django Admin | `ChangeList.get_ordering()` |
-
-As constantes usadas pelo `ChangeListPlus` podem ser vistas em
-`djtools/contrib/admin/views/__init__.py:19-29`:
-
-```python
-class ChangeListPlus(ChangeList):
-    ALL_VAR = 'all'
-    ORDER_VAR = 'o'
-    ORDER_TYPE_VAR = 'ot'
-    PAGE_VAR = 'p'
-    SEARCH_VAR = 'q'
-    TO_FIELD_VAR = 't'
-    IS_POPUP_VAR = 'pop'
-    ERROR_FLAG = 'e'
-```
-
-`q`, `o` e `p`, portanto, nao sao nomes de campos do model. Sao comandos da
-interface administrativa interpretados pelo `ChangeList`.
-
-Considere uma URL didatica:
-
-```text
-/admin/edu/aluno/?tab=tab_suap&ano_letivo__id__exact=<id-do-ano>&q=Paloma&o=2&p=1
-```
-
-Cada parte alimenta o `ChangeList`:
-
-| Parametro | Efeito |
-|---|---|
-| `tab=tab_suap` | seleciona uma tab do `CustomTabListFilter` |
-| `ano_letivo__id__exact=<id-do-ano>` | aplica um filtro de campo |
-| `q=Paloma` | executa a busca em `search_fields` |
-| `o=2` | solicita ordenacao por uma coluna da listagem |
-| `p=1` | solicita uma pagina do paginador |
-
-##### A. Busca textual: `q`
-
-O formulario de pesquisa do SUAP esta em
-`djtools/templates/adminutils/search_form.html:1-9`. O atributo `name` do campo
-recebe `search_var`, cujo valor e `q`:
-
-```django
-<input
-    type="text"
-    name="{{ search_var }}"
-    value="{{ cl.query }}"
-    id="searchbar"
-/>
-```
-
-O template tambem preserva os demais parametros em campos ocultos. Assim, fazer
-uma busca nao precisa descartar a tab e os filtros ja selecionados.
-
-Exemplo:
-
-```text
-/admin/edu/aluno/?q=Paloma
-```
-
-O termo e aplicado somente aos campos declarados em `search_fields`. No
-`AlunoAdmin`, eles aparecem em `edu/admin.py:1615`:
-
-```python
-search_fields = (
-    'pessoa_fisica__nome_registro',
-    'pessoa_fisica__search_fields_optimized',
-    'registroemissaodiploma__pasta',
-    'numero_pasta',
-)
-```
-
-O `ModelAdminPlus.get_search_results()`, em
-`djtools/contrib/admin/options/__init__.py:261-293`, separa o texto em termos,
-constroi os lookups e acrescenta condicoes ao queryset. Em termos simplificados:
-
-```text
-q=Paloma Souza
-  -> termos: "Paloma" e "Souza"
-  -> cada termo e procurado nos campos de search_fields
-  -> o resultado deve atender aos termos normalizados
-```
-
-Por padrao, `ModelAdminPlus.avoid_short_search` vale `True`, em
-`djtools/contrib/admin/options/__init__.py:136-137`. Por isso, a interface exige
-ao menos tres caracteres e o backend pode desconsiderar termos muito curtos.
-
-##### B. Filtros: nomes de campos e lookups do ORM
-
-Filtros nao possuem uma unica chave fixa. O nome do parametro depende do campo e
-do lookup produzido pelo `FieldListFilter` ou pelo filtro personalizado.
-
-Exemplos de formato:
-
-```text
-?ano_letivo__id__exact=<id-do-ano>
-?periodo_letivo__exact=1
-?situacao__id__exact=<id-da-situacao>
-?curso_campus__diretoria__setor__uo__id__exact=<id-do-campus>
-```
-
-As partes separadas por `__` formam o caminho que o ORM deve percorrer:
-
-```text
-curso_campus -> diretoria -> setor -> uo -> id -> exact
-```
-
-Esses filtros correspondem ao `list_filter` real de `AlunoAdmin`, em
-`edu/admin.py:1601-1606`:
-
-```python
-list_filter = (
-    CustomTabListFilter,
-    'ano_letivo',
-    'periodo_letivo',
-    'situacao',
-    'curso_campus__diretoria__setor__uo',
-    'curso_campus',
-    'polo',
-    'curso_campus__modalidade',
-)
-```
-
-O processamento ocorre em `ChangeListPlus.get_filters()`, localizado em
-`djtools/contrib/admin/views/__init__.py:50-164`. O metodo:
-
-1. separa os parametros reservados, como busca e ordenacao;
-2. verifica se cada lookup e permitido com `lookup_allowed()`;
-3. entrega os parametros aos filtros declarados em `list_filter`;
-4. prepara os lookups restantes;
-5. identifica se relacionamentos podem produzir registros duplicados.
-
-O filtro escolhido e acrescentado ao queryset; ele nao substitui o queryset
-seguro devolvido por `AlunoAdmin.get_queryset()`.
-
-Um valor recebido por `GET` continua sendo entrada do usuario. Nas linhas
-`55-57`, o `ChangeListPlus` rejeita lookups nao autorizados. Se o filtro for
-invalido, `ModelAdminPlus.changelist_view()` trata a excecao em
-`djtools/contrib/admin/options/__init__.py:379-381` e devolve uma mensagem de
-erro. Nunca se deve usar um parametro livre para montar SQL manualmente.
-
-##### C. Tabs do SUAP: `tab`
-
-`tab` nao e uma constante padrao do `ChangeList` do Django. No SUAP, ela e
-implementada por `TabListFilter`, em
-`djtools/contrib/admin/filters/__init__.py:55-58`:
-
-```python
-class TabListFilter(admin.SimpleListFilter):
-    title = 'tab'
-    parameter_name = 'tab'
-    template = 'admin/tablistfilter.html'
-```
-
-O `AlunoAdmin` declara suas tabs em `edu/admin.py:1633-1649`:
-
-```python
-def tab_suap(self, request, queryset):
-    return queryset.filter(
-        codigo_academico__isnull=True,
-        matriz__id__isnull=False,
-    )
-
-
-def get_tabs(self, request):
-    return ['tab_suap', 'tab_q_academico', 'tab_integralizados']
-```
-
-Ao acessar:
-
-```text
-/admin/edu/aluno/?tab=tab_suap
-```
-
-`CustomTabListFilter.queryset()`, em
-`djtools/contrib/admin/filters/__init__.py:149-171`, localiza o metodo cujo nome
-veio no parametro e o chama com o queryset atual:
-
-```python
-return getattr(self.model_admin, self.value())(request, queryset)
-```
-
-Quando `tab` nao e informado, o filtro aplica a primeira tab devolvida por
-`get_all_tabs()`, conforme as linhas `158-162`. Portanto, ausencia do parametro
-na URL nao significa necessariamente ausencia de filtro de tab.
-
-O template `djtools/templates/admin/tablistfilter.html:1-10` gera os links das
-abas por meio de `cl.get_query_string()`. Isso permite trocar a tab preservando
-parametros compativeis da listagem.
-
-##### D. Paginacao: `p`
-
-O parametro `p` identifica a pagina solicitada:
-
-```text
-?p=0  -> primeira pagina
-?p=1  -> segunda pagina
-?p=2  -> terceira pagina
-```
-
-Internamente, a numeracao usada pelo `ChangeList` comeca em zero. Esse detalhe e
-facil de confundir porque a interface visual apresenta paginas a partir de 1.
-
-No `AlunoAdmin`, `list_per_page = 15`, em `edu/admin.py:1610`. Assim, cada pagina
-normalmente exibe ate 15 alunos. O parametro nao altera o conjunto filtrado; ele
-define apenas qual fatia desse conjunto sera colocada em `cl.result_list`.
-
-O SUAP gera os links em `djtools/templatetags/tags/utils.py:199-213`:
-
-```python
-url = cl.get_query_string({PAGE_VAR: i})
-```
-
-`get_query_string()` troca `p` e preserva busca, filtros, tab e ordenacao. Ao
-alterar um filtro, a navegacao deve voltar a uma pagina valida; uma pagina que
-existia antes da filtragem pode deixar de existir depois dela.
-
-##### E. Ordenacao: `o`
-
-O parametro `o` nao recebe diretamente o nome do campo. Ele usa a posicao
-interna da coluna na `list_display` renderizada:
-
-```text
-?o=2     -> ordenacao por uma coluna
-?o=-2    -> mesma coluna na direcao inversa
-?o=2.-3  -> mais de um criterio de ordenacao
-```
-
-O sinal `-` indica ordem descendente, e criterios multiplos sao separados por
-ponto. Como o indice depende da composicao da listagem, inclusive de colunas
-adicionadas pelo Admin, nao se deve construir esse valor supondo que ele seja o
-ID de um campo.
-
-Para um campo real, o Django consegue obter a expressao de ordenacao. Para uma
-coluna calculada, ele precisa de `admin_order_field` ou de `ordering=` em
-`@admin.display`. O exemplo de `AlunoAdmin`, em `edu/admin.py:1862-1863`, liga a
-coluna **Dados Principais** ao nome da pessoa:
-
-```python
-get_info_principal.short_description = 'Dados Principais'
-get_info_principal.admin_order_field = 'pessoa_fisica__nome'
-```
-
-O Django traduz o indice recebido em `o` para essa expressao e aplica algo
-equivalente a:
-
-```python
-queryset.order_by('pessoa_fisica__nome')
-```
-
-Depois do processamento nativo, `ChangeListPlus.get_ordering()`, em
-`djtools/contrib/admin/views/__init__.py:166-170`, remove um `-pk` adicional em
-determinadas ordenacoes compostas.
-
-##### F. Composicao e preservacao dos parametros
-
-Os recursos podem ser combinados na mesma URL:
-
-```text
-/admin/edu/aluno/
-    ?tab=tab_suap
-    &ano_letivo__id__exact=<id-do-ano>
-    &situacao__id__exact=<id-da-situacao>
-    &q=Paloma
-    &o=2
-    &p=1
-```
-
-Na URL real, tudo aparece em uma unica linha. A separacao acima serve apenas para
-facilitar a leitura.
-
-O metodo `cl.get_query_string()` e importante porque gera uma nova query string
-alterando ou removendo apenas as chaves indicadas. Sem ele, clicar na pagina 2
-poderia apagar a busca, ou trocar uma tab poderia apagar todos os filtros.
-
-Os parametros influenciam a consulta nesta sequencia conceitual:
-
-```text
-get_queryset() do ModelAdmin
-    -> tab e filtros restringem registros
-    -> q aplica a busca textual
-    -> o define a ordenacao
-    -> contagens sao calculadas
-    -> p seleciona a fatia da pagina
-    -> result_list e renderizada
-```
-
-A URL torna o estado da tela reproduzivel e compartilhavel, mas **nao concede
-permissao**. O usuario continua limitado por `has_view_permission()`, pelo
-manager usado em `get_queryset()` e pelas regras de escopo do sistema.
-
-Fluxo sobre o exemplo de aluno:
-
-```text
-AlunoAdmin.get_queryset()
-  -> parte de Aluno.locals
-  -> exclui matriculas temporarias de minicurso
-  -> antecipa ano_letivo, pessoa_fisica e situacao
-  -> tab_suap() restringe a origem academica
-  -> filtro restringe o ano letivo
-  -> busca procura Paloma
-  -> ordering organiza o resultado
-  -> paginator seleciona a pagina
-```
-
-A ordem exata de composicao e controlada pelo `ChangeList`, mas todas as
-operacoes permanecem encadeadas sobre o queryset inicial do Admin. Por isso,
-busca e filtros nao devem reconstruir a consulta com `Aluno.objects.all()`.
-
-##### G. Acompanhamento do fluxo
-
-1. Abra `/admin/edu/aluno/` e acompanhe a barra de endereco.
-2. Digite um nome com pelo menos tres caracteres e identifique `q`.
-3. Selecione ano letivo e situacao; identifique os lookups adicionados.
-4. Troque entre as tabs e localize `tab=tab_suap`, `tab=tab_q_academico` ou
-   `tab=tab_integralizados`.
-5. Clique em um cabecalho ordenavel e observe `o`; clique novamente e veja a
-   inversao da direcao.
-6. Avance uma pagina e observe que a segunda pagina usa `p=1`.
-7. Remova um parametro por vez diretamente da URL e compare o resultado.
-8. No depurador, inspecione `request.GET`, `cl.params`, `cl.queryset.query` e
-   `cl.page_num`.
-
-> **Resumo didatico:** `GET` descreve o estado atual da listagem. `q`, `o` e `p`
-> controlam recursos gerais do `ChangeList`; os lookups controlam filtros; e
-> `tab` seleciona uma filtragem adicional implementada pelo DJTools. Todos eles
-> refinam o queryset que o usuario ja tem permissao para consultar.
-
-#### 2.2.5. O que o `ChangeListPlus` modifica
-
-`ChangeListPlus` esta em `djtools/contrib/admin/views/__init__.py:19-170` e
-sobrescreve tres pontos principais.
-
-**1. `get_queryset()` - busca adaptada ao SUAP**
-
-Nas linhas `31-48`, primeiro chama o comportamento nativo:
-
-```python
-qs = super().get_queryset(request)
-```
-
-Quando o model possui um campo de busca otimizado reconhecido por
-`get_search_field()`, normaliza os termos, converte-os para ASCII em maiusculas
-e reaplica a busca com `contains`. Isso atende a convencao dos campos
-`search_fields_optimized` usados pelo SUAP.
-
-**2. `get_filters()` - filtros relacionados e datas**
-
-Nas linhas `50-164`, valida se cada lookup e permitido, cria os filtros e
-detecta consultas que podem produzir duplicidades. Para determinados campos
-relacionados, monta `QuerysetACListFilter`, oferecendo autocomplete limitado
-ao queryset acessivel pelo Admin. Tambem converte `date_hierarchy` em limites
-`gte` e `lt` para o periodo escolhido.
-
-**3. `get_ordering()` - ajuste da ordenacao**
-
-Nas linhas `166-170`, parte da ordenacao nativa e remove um `-pk` adicional
-quando ja existe mais de um criterio:
-
-```python
-def get_ordering(self, request, queryset):
-    ordering = super().get_ordering(request, queryset)
-    if len(ordering) > 1 and ordering[-1] == '-pk':
-        ordering.pop(-1)
-    return ordering
-```
-
-O objetivo e preservar a ordenacao solicitada sem manter esse desempate
-automatico especifico no final da lista.
-
-#### 2.2.6. GET, POST e exportacao
-
-O mesmo `changelist_view()` atende fluxos diferentes:
-
-| Requisicao | Caminho principal |
-|---|---|
-| `GET` comum | monta `ChangeListPlus`, contexto e pagina HTML |
-| `GET` com filtros | monta o mesmo objeto com queryset restringido |
-| `GET` com `export_to_xls=1` | reconstrói o queryset atual e inicia a tarefa de exportacao |
-| `POST` de action | monta o queryset, limita a selecao e executa a action |
-| `POST` de `list_editable` | valida o formset da listagem e salva as linhas alteradas |
-
-Na exportacao, `ModelAdminPlus.get_current_queryset()`, em
-`djtools/contrib/admin/options/__init__.py:237-259`, instancia um
-`ChangeListPlus` e devolve `cl.get_queryset(request)`. Assim, busca, filtros e
-ordenacao podem ser reutilizados sem limitar a exportacao a pagina visivel.
-
-#### 2.2.7. Contexto e template final
-
-Depois de montar resultados, actions e formularios editaveis, a view coloca o
-objeto no contexto como `cl`. O `ModelAdminPlus` define em
-`djtools/contrib/admin/options/__init__.py:119-121`:
-
-```python
-change_list_template = 'djtools/templates/adminutils/change_list.html'
-```
-
-Esse template estende `admin/change_list.html` na linha 1. Entre outras
-customizacoes, ele:
-
-- renderiza a action bar do SUAP;
-- integra tabs, busca e filtros;
-- atualiza o conteudo por AJAX quando `filters_ajax` esta ativo;
-- preserva os filtros no link de exportacao.
-
-Em requisicoes AJAX, `ModelAdminPlus.changelist_view()` renderiza apenas
-`djtools/templates/adminutils/content_main_admin.html`, nas linhas `382-383`,
-e o JavaScript substitui `#content-main` sem recarregar a pagina inteira.
-
-Fluxo completo resumido:
-
-```text
-URL da listagem
-  -> AdminSite.admin_view()
-  -> ModelAdminPlus.changelist_view()
-  -> ModelAdmin.changelist_view()
-  -> get_changelist_instance()
-  -> get_changelist() retorna ChangeListPlus
-  -> ChangeListPlus monta queryset, filtros, busca e ordering
-  -> ChangeList calcula contagens, pagina e result_list
-  -> contexto recebe cl
-  -> change_list.html ou fragmento AJAX
-  -> resposta HTML
-```
-
-#### 2.2.8. Como acompanhar o fluxo
-
-1. Abra `/admin/edu/aluno/` sem filtros.
-2. Coloque um breakpoint em `AlunoAdmin.get_queryset()` e identifique o
-   queryset raiz.
-3. Continue ate `ModelAdminPlus.get_changelist()` e confirme que a classe
-   devolvida e `ChangeListPlus`.
-4. Depois da chamada a `super().changelist_view()`, obtenha
-   `cl = retorno.context_data['cl']` e observe `cl.root_queryset`,
-   `cl.queryset`, `cl.result_count` e `cl.result_list`.
-5. Aplique uma tab, um filtro e uma busca; compare `request.GET` e
-   `cl.queryset.query`.
-6. Troque a ordenacao clicando em uma coluna e localize o parametro `o`.
-7. Mude de pagina e localize o parametro `p`.
-8. Observe no navegador que filtros AJAX alteram a URL e substituem apenas o
-   conteudo principal.
-
-> **Resumo didatico:** o `ModelAdmin` declara como a listagem deve funcionar;
-> o `ChangeListPlus` transforma declaracoes e parametros HTTP em um queryset;
-> e `changelist_view()` coordena permissao, actions, exportacao, template e
-> resposta.
-
-### 2.3. `list_display`
-
-`list_display` aceita nomes de campos do model e nomes de metodos do admin:
-
-```python
-list_display = ('id', 'descricao', 'get_situacao')
-```
-
-Campo do model:
-
-```python
-'descricao'
-```
-
-Coluna calculada:
-
-```python
-def get_situacao(self, obj):
-    return 'Ativo' if obj.ativo else 'Inativo'
-
-get_situacao.short_description = 'Situacao'
-get_situacao.admin_order_field = 'ativo'
-```
-
-O metodo recebe `obj`, o registro da linha atual. `short_description` define o
-cabecalho e `admin_order_field` informa qual campo deve ser usado ao ordenar.
-
-Exemplo real em `AlunoAdmin`, `edu/admin.py:1843-1863`:
-
-```python
-def get_info_principal(self, obj):
-    # Monta um resumo com nome, matricula, curso e situacao.
-    ...
-    return mark_safe(out)
-
-
-get_info_principal.short_description = 'Dados Principais'
-get_info_principal.admin_order_field = 'pessoa_fisica__nome'
-```
-
-`mark_safe()` impede que o HTML seja escapado. Ele deve ser usado somente com
-conteudo controlado ou devidamente escapado. Dados livres inseridos diretamente
-em HTML podem abrir uma vulnerabilidade de XSS. Quando possivel, prefira
-`format_html()`.
-
-#### 2.3.1. Metadados de colunas: `short_description`, `admin_order_field`, `boolean` e `@admin.display`
-
-Quando um nome colocado em `list_display` aponta para um metodo, o valor da
-coluna e calculado em Python. Por isso, o Django nao consegue descobrir sozinho:
-
-- qual titulo deve aparecer no cabecalho;
-- por qual campo do banco a coluna pode ser ordenada;
-- se o retorno deve ser apresentado como um indicador booleano.
-
-Essas informacoes sao fornecidas por **metadados anexados ao metodo**. Eles nao
-criam campos no model e nao salvam valores no banco: apenas orientam a forma como
-o Django Admin apresenta e ordena a coluna.
-
-| Sintaxe tradicional | `@admin.display` | Funcao |
-|---|---|---|
-| `metodo.short_description` | `description=` | Define o titulo da coluna |
-| `metodo.admin_order_field` | `ordering=` | Define a expressao usada na ordenacao |
-| `metodo.boolean = True` | `boolean=True` | Usa os icones de verdadeiro, falso e desconhecido |
-| `metodo.empty_value_display` | `empty_value=` | Define como um valor vazio sera exibido |
-
-O SUAP utiliza o Django `4.1.5`, conforme `requirements/base.txt:2`. Nessa
-versao, `@admin.display` e um decorador **nativo do Django**, implementado em
-`django/contrib/admin/decorators.py`. O decorador somente registra esses mesmos
-atributos na funcao; ele nao executa consultas e nao chama o metodo.
-
-##### A. `short_description`: titulo legivel para a coluna
-
-Sem uma descricao explicita, o Django tenta produzir um titulo a partir do nome
-do campo ou metodo. Em nomes tecnicos como `get_info_principal`, o resultado nao
-costuma ser adequado para o usuario.
-
-Exemplo real em `AlunoAdmin`, `edu/admin.py:1843-1863`:
-
-```python
-def get_info_principal(self, obj):
-    # Calcula o conteudo exibido para cada aluno da listagem.
-    ...
-    return mark_safe(out)
-
-
-# O cabecalho da coluna sera "Dados Principais".
-get_info_principal.short_description = 'Dados Principais'
-```
-
-Neste exemplo:
-
-1. `list_display` solicita a coluna `get_info_principal`;
-2. para cada linha, o Admin chama `get_info_principal(self, obj)`;
-3. `obj` e o `Aluno` correspondente aquela linha;
-4. `short_description` define apenas o texto do cabecalho.
-
-##### B. `admin_order_field`: ordenacao de uma coluna calculada
-
-O retorno de `get_info_principal()` e um trecho de HTML. Ordenar por esse HTML
-em Python seria incorreto e ineficiente. Em `edu/admin.py:1863`, o codigo informa
-ao Django qual campo real deve ser enviado ao ORM:
-
-```python
-get_info_principal.admin_order_field = 'pessoa_fisica__nome'
-```
-
-Assim, quando o usuario clica no cabecalho **Dados Principais**, o fluxo e:
-
-```text
-Clique no cabecalho
-        |
-        v
-parametro "o" na query string
-        |
-        v
-ChangeList resolve admin_order_field
-        |
-        v
-QuerySet.order_by('pessoa_fisica__nome')
-        |
-        v
-ORDER BY no banco de dados
-```
-
-Os dois sublinhados atravessam o relacionamento de `Aluno` com
-`PessoaFisica`. Portanto, a coluna mostra um resumo, mas e ordenada pelo nome da
-pessoa. Tambem seria possivel usar `'-pessoa_fisica__nome'` para declarar a
-ordem descendente inicial da coluna.
-
-Pontos importantes:
-
-- o atributo nao ordena pelo valor retornado pelo metodo;
-- o caminho precisa ser valido para `QuerySet.order_by()`;
-- campos relacionados podem adicionar `JOIN` a consulta;
-- o metadado habilita a ordenacao, mas nao cria indice no banco;
-- se `admin_order_field` nao for definido, o cabecalho da coluna calculada nao
-  sera ordenavel.
-
-##### C. `boolean`: icones no lugar de texto
-
-Quando um metodo retorna `True`, `False` ou `None`, o metadado `boolean = True`
-faz o Admin usar os icones padrao de sim, nao e desconhecido.
-
-Exemplo real em
-`licenca_capacitacao/admin.py:856-859`:
-
-```python
-def get_solicitou_desistencia(self, obj):
-    # Converte a existencia da data em um booleano verdadeiro ou falso.
-    return True if obj.data_solicitacao_desistencia else False
-
-
-get_solicitou_desistencia.short_description = 'Solicitou Desistencia'
-get_solicitou_desistencia.boolean = True
-```
-
-O metodo verifica se existe uma data de solicitacao. Com `boolean = True`, a
-listagem nao imprime literalmente `True` ou `False`; ela apresenta o indicador
-visual padrao do Admin.
-
-O retorno deve ser realmente booleano ou `None`:
-
-| Retorno | Apresentacao esperada |
-|---|---|
-| `True` | icone positivo |
-| `False` | icone negativo |
-| `None` | icone de valor desconhecido |
-
-Nao se deve retornar `'Sim'` ou `'Nao'` quando `boolean = True`. Esse metadado
-tambem nao cria um filtro lateral e nao constitui uma regra de permissao; ele
-altera somente a representacao do valor.
-
-##### D. `@admin.display`: forma moderna e declarativa
-
-O decorador concentra os metadados junto da assinatura do metodo. Para utiliza-lo,
-o modulo precisa importar o admin do Django:
-
-```python
-from django.contrib import admin
-```
-
-Exemplo real em `siads/admin.py:328-342`:
-
-```python
-class MaterialPermanenteAdmin(ModelAdminPlus):
-    list_display = ('uo', 'grupo', 'get_entrada_descricao', 'get_extras', 'get_ajuste')
-
-    @admin.display(ordering='entrada__descricao')
-    def get_entrada_descricao(self, obj):
-        ...
-        return safe(''.join(ret))
-
-    get_entrada_descricao.short_description = 'Entrada'
-```
-
-Esse trecho e um exemplo de transicao: `ordering` ja usa o decorador moderno,
-enquanto a descricao ainda utiliza o atributo tradicional. As duas formas podem
-coexistir porque o decorador grava metadados na propria funcao.
-
-Um exemplo de `description` com a sintaxe moderna aparece em
-`pgd2/models.py:1385-1395`:
-
-```python
-@admin.display(description='Data inicio')
-def get_data_inicio(self):
-    return self.periodo_pes.data_inicio
-```
-
-Nesse caso, o metodo pertence ao model e recebe apenas `self`, que e a propria
-instancia exibida. Em um metodo definido no `ModelAdmin`, os parametros usuais
-sao `self` e `obj`.
-
-O uso moderno equivalente ao exemplo do aluno seria:
-
-```python
-@admin.display(
-    description='Dados Principais',
-    ordering='pessoa_fisica__nome',
-)
-def get_info_principal(self, obj):
-    ...
-    return mark_safe(out)
-```
-
-Isso e apenas uma reescrita didatica: o codigo atual de `AlunoAdmin` continua
-usando `short_description` e `admin_order_field` depois da definicao do metodo.
-
-##### E. Exemplo moderno com `boolean=True`
-
-O model de PGD apresenta um uso real em `pgd/models.py:915-924`:
-
-```python
-@admin.display(boolean=True)
-def estah_vigente(self):
-    if not self.cancelado:
-        hoje = datetime.date.today()
-        if self.data_inicio > hoje:
-            return False
-        return not self.data_fim or self.data_fim >= hoje
-    return False
-
-
-estah_vigente.short_description = 'Esta vigente'
-```
-
-A versao totalmente concentrada no decorador seria:
-
-```python
-@admin.display(description='Esta vigente', boolean=True)
-def estah_vigente(self):
-    ...
-```
-
-`boolean=True` e `empty_value=` nao devem ser usados simultaneamente: uma coluna
-booleana ja reserva `None` para representar o estado desconhecido.
-
-##### F. Como estudar o trecho
-
-Ao encontrar uma coluna calculada, siga esta ordem:
-
-1. Localize o nome da coluna em `list_display`.
-2. Descubra se o nome corresponde a um campo, metodo do model ou metodo do
-   `ModelAdmin`.
-3. Leia o retorno do metodo para entender o conteudo de cada linha.
-4. Procure `short_description` ou `description=` para identificar o cabecalho.
-5. Procure `admin_order_field` ou `ordering=` para saber se a coluna e
-   ordenavel e qual campo chega ao ORM.
-6. Procure `boolean = True` ou `boolean=True` para saber se o valor sera
-   representado por icones.
-
-> **Resumo didatico:** o metodo calcula o valor; os metadados explicam ao Admin
-> como apresentar e ordenar esse valor. A sintaxe tradicional e
-> `metodo.atributo = valor`; `@admin.display(...)` e a forma nativa moderna de
-> declarar as mesmas informacoes perto do metodo.
-
-### 2.4. `search_fields`
-
-Exemplo de `AlunoAdmin`, em `edu/admin.py:1615`:
-
-```python
-search_fields = (
-    'pessoa_fisica__nome_registro',
-    'pessoa_fisica__search_fields_optimized',
-    'registroemissaodiploma__pasta',
-    'numero_pasta',
-)
-```
-
-Os dois sublinhados atravessam relacionamentos:
-
-```text
-Aluno -> pessoa_fisica -> nome_registro
-Aluno -> registroemissaodiploma -> pasta
-```
-
-No Django, prefixos podem alterar a busca:
-
-| Sintaxe | Comportamento aproximado |
-|---|---|
-| `'nome'` | `icontains` |
-| `'^nome'` | `istartswith` |
-| `'=matricula'` | correspondencia exata |
-| `'@texto'` | busca textual, conforme backend |
-
-O `ModelAdminPlus` sobrescreve `get_search_results()` em
-`djtools/contrib/admin/options/__init__.py:261-293`. Alem de construir os
-lookups, ele normaliza os termos e pode ignorar termos muito curtos por meio de
-`avoid_short_search = True`.
-
-Cuidados:
-
-- busca em muitos relacionamentos pode gerar joins caros;
-- relacoes de muitos valores podem produzir duplicidades;
-- campos numericos podem exigir correspondencia exata;
-- nunca presuma que a busca substitui um filtro estruturado.
-
-### 2.5. `list_filter`
-
-O `AlunoAdmin` apresenta filtros reais em `edu/admin.py:1603-1606`:
-
-```python
-list_filter = (
-    CustomTabListFilter,
-    'ano_letivo',
-    'periodo_letivo',
-    'situacao',
-    'curso_campus__diretoria__setor__uo',
-    'curso_campus',
-    'polo',
-    'curso_campus__modalidade',
-)
-```
-
-Os filtros simples sao interpretados pelo Django a partir do tipo do campo. Os
-caminhos com `__` filtram por models relacionados. `CustomTabListFilter` e uma
-extensao do SUAP, explicada na Etapa 3.
-
-Todo filtro recebido na URL deve ser tratado como entrada do usuario. O Admin
-valida os valores e monta o `QuerySet`; ainda assim, regras de autorizacao nao
-devem depender apenas da presenca ou ausencia de um filtro na interface.
-
-### 2.6. `ordering` e `list_per_page`
-
-Os dois atributos afetam a consulta da listagem, mas possuem responsabilidades
-diferentes:
-
-- `ordering` define a ordem inicial dos registros;
-- `list_per_page` define quantos registros dessa ordem aparecem em cada pagina.
-
-Ambos sao recursos nativos do Django. `ordering = None` esta em
-`django/contrib/admin/options.py:117-132`; `list_per_page = 100` esta em
-`django/contrib/admin/options.py:612-624`.
-
-#### 2.6.1. Exemplo real do EDU
-
-**Arquivo:** `edu/admin.py`  
-**Linhas:** `1601-1613`
-
-```python
-class AlunoAdmin(ModelAdminPlus):
-    # ... list_display e filtros omitidos ...
-    list_per_page = 15
-    ordering = ('-id',)
-    form = AlunoForm
-```
-
-Na tela `/admin/edu/aluno/`, o Admin apresenta inicialmente os alunos do maior
-`id` para o menor, em grupos de 15 registros.
-
-Em termos de SQL, a primeira pagina produz uma consulta equivalente a:
-
-```sql
-SELECT ...
-FROM edu_aluno
-ORDER BY id DESC
-LIMIT 15;
-```
-
-A segunda pagina usa um deslocamento equivalente a `LIMIT 15 OFFSET 15`. O SQL
-real contem os joins, filtros e restricoes definidos pelo queryset do Admin e
-pode variar conforme o banco utilizado.
-
-#### 2.6.2. Interacao com `Meta.ordering`
-
-O model `Aluno` possui uma ordenacao padrao diferente.
-
-**Arquivo:** `edu/models/alunos.py`  
-**Linhas:** `482-485`
-
-```python
-class Meta:
-    ordering = ('pessoa_fisica__nome',)
-    verbose_name = 'Aluno'
-    verbose_name_plural = 'Alunos'
-```
-
-A prioridade da listagem administrativa e:
-
-1. uma ordenacao escolhida pelo usuario ao clicar no cabecalho de uma coluna;
-2. `ModelAdmin.ordering`, quando declarado;
-3. `Model.Meta.ordering`, quando o Admin nao declara sua propria ordenacao.
-
-Portanto, `AlunoAdmin.ordering = ('-id',)` substitui, nessa listagem, a ordem
-alfabetica definida pelo model. Ela nao altera `Aluno.Meta` nem outras consultas
-do sistema.
-
-O Django implementa essa escolha em
-`django/contrib/admin/views/main.py:311-317` e
-`django/contrib/admin/views/main.py:343-388`. Depois, aplica ao queryset:
-
-```python
-ordering = self.get_ordering(request, qs)
-qs = qs.order_by(*ordering)
-```
-
-Esse trecho esta em `django/contrib/admin/views/main.py:545-547`. Para manter
-uma ordem deterministica entre paginas, o Django pode acrescentar a chave
-primaria quando os campos escolhidos admitem empates.
-
-#### 2.6.3. Como a paginacao e executada
-
-`ModelAdmin.get_paginator()`, em
-`django/contrib/admin/options.py:907-910`, cria o paginator com o queryset e o
-valor de `list_per_page`. O `ChangeList` conta os resultados e seleciona apenas
-os objetos da pagina solicitada em
-`django/contrib/admin/views/main.py:274-309`.
-
-Fluxo resumido:
-
-```text
-queryset filtrado
-    -> ORDER BY definido pelo ChangeList
-    -> contagem dos resultados
-    -> pagina solicitada
-    -> recorte de 15 registros
-    -> renderizacao da tabela
-```
-
-`list_per_page` reduz a quantidade de objetos renderizados, mas nao torna uma
-consulta cara automaticamente barata. Ainda podem existir:
-
-- consulta de contagem para calcular o numero de paginas;
-- uma segunda contagem do queryset sem filtros, conforme a configuracao;
-- joins, filtros e ordenacoes custosos;
-- consultas N+1 causadas por colunas que acessam relacionamentos;
-- custo alto de `OFFSET` em paginas muito distantes.
-
-Por isso, a escolha deve equilibrar leitura e desempenho. Diminuir de 100 para
-15 registros reduz HTML e processamento por pagina, mas indices, queryset e
-`select_related()` continuam relevantes.
-
-**Demonstracao sugerida**
-
-1. Acesse `/admin/edu/aluno/` e confirme que aparecem ate 15 registros.
-2. Observe que a ordem inicial segue `-id`, e nao `Aluno.Meta.ordering`.
-3. Clique em uma coluna ordenavel, como `Dados Principais`.
-4. Mostre o parametro de ordenacao inserido na URL pelo Admin.
-5. Avance uma pagina e mostre o parametro de pagina sem perder os filtros.
-
-### 2.7. Formulario administrativo
-
-Sem configuracao explicita, o Django cria um `ModelForm` a partir do model. O
-admin pode alterar esse comportamento com:
-
-| Atributo | Funcao |
-|---|---|
-| `fields` | Escolhe e ordena campos |
-| `exclude` | Exclui campos |
-| `fieldsets` | Agrupa e organiza campos |
-| `readonly_fields` | Exibe valores sem permitir alteracao |
-| `form` | Indica um `ModelForm` personalizado |
-| `add_form` | Form especifico para inclusao no `ModelAdminPlus` |
-| `change_form` | Form especifico para edicao no `ModelAdminPlus` |
-
-Exemplo de `AlunoAdmin`, `edu/admin.py:1612-1613`:
-
-```python
-form = AlunoForm
-fieldsets = AlunoForm.fieldsets
-```
-
-`AlunoForm` comeca em `edu/forms.py:215`. O admin reutiliza suas validacoes,
-campos e organizacao visual. A classe `fieldsets` do form inicia em
-`edu/forms.py:252`.
-
-Exemplo de `fieldsets` declarado diretamente no admin, em
-`edu/admin.py:259-263`:
-
-```python
-fieldsets = (
-    ('Dados Gerais', {'fields': ('tipo',)}),
-    ('Dados do Ato', {
-        'fields': (('tipo_ato', 'numero_ato', 'data_ato'),)
-    }),
-)
-```
-
-Uma string representa uma linha com um campo. Uma tupla interna agrupa varios
-campos na mesma linha visual.
-
-### 2.8. `list_display_links`
-
-`list_display_links` escolhe quais colunas de `list_display` funcionam como
-links para a tela de alteracao do registro.
-
-**Origem:** recurso nativo do Django.  
-**Declaracao padrao:** `django/contrib/admin/options.py:615-618`.  
-**Escolha da coluna:** `django/contrib/admin/options.py:1065-1079`.  
-**Aplicacao na listagem:** `django/contrib/admin/options.py:822-839`.
-
-Exemplo real do SUAP:
-
-**Arquivo:** `comum/admin.py`  
-**Linhas:** `1613-1619`
-
-```python
-class ContatoEmergenciaAdmin(ModelAdminPlus):
-    list_display = ('pessoa_fisica', 'nome_contato', 'telefone')
-    list_display_links = ('nome_contato',)
-    search_fields = ('pessoa_fisica__nome', 'nome_contato', 'telefone')
-    ordering = ('pessoa_fisica__nome', 'nome_contato', 'telefone')
-    fields = ('nome_contato', 'telefone')
-    form = ContatoEmergenciaForm
-```
-
-Na tela `/admin/comum/contatoemergencia/`, as tres informacoes aparecem como
-colunas, mas somente `nome_contato` e o link textual para a edicao.
-
-Regras importantes:
-
-- os nomes devem pertencer a `list_display`;
-- sem configuracao explicita, o Django usa a primeira coluna apropriada como
-  link;
-- `list_display_links = None` remove os links textuais de edicao;
-- uma mesma coluna nao pode estar em `list_display_links` e `list_editable`.
-
-No `ModelAdminPlus`, os icones de visualizacao, edicao e exclusao tambem podem
-ser controlados por `list_display_icons`. Esse recurso adicional nao elimina a
-funcao nativa de `list_display_links`.
-
-### 2.9. `list_select_related`
-
-`list_select_related` e uma configuracao de desempenho. Ela pede ao ORM que
-traga relacionamentos `ForeignKey` e `OneToOneField` na mesma consulta SQL da
-listagem, evitando uma nova consulta para cada linha apresentada.
-
-**Origem:** recurso nativo do Django.  
-**Declaracao padrao:** `django/contrib/admin/options.py:618`.  
-**Implementacao:** `django/contrib/admin/views/main.py:554-564`.
-
-Valores aceitos:
-
-```python
-# O Django decide se deve aplicar select_related ao analisar list_display.
-list_select_related = False
-
-# Segue todos os relacionamentos adequados encontrados pelo ORM.
-list_select_related = True
-
-# Segue somente os caminhos informados.
-list_select_related = ('pessoa_fisica', 'situacao')
-```
-
-O codigo nativo executa, conforme o valor, `qs.select_related()` ou
-`qs.select_related(*self.list_select_related)`.
-
-Nao ha declaracao explicita de `list_select_related` nos admins atuais do EDU.
-O modulo aplica o mesmo recurso diretamente em `get_queryset()`, pois nesse
-ponto tambem consegue escolher o manager e acrescentar outras restricoes.
-
-Exemplo real:
-
-**Arquivo:** `edu/admin.py`  
-**Linhas:** `1625-1626`
-
-```python
-def get_queryset(self, request):
-    return super().get_queryset(request, Aluno.locals).exclude(
-        turmaminicurso__gerar_matricula=False
-    ).select_related('ano_letivo', 'pessoa_fisica', 'situacao')
-```
-
-Quando a listagem usa `obj.pessoa_fisica.nome`, `obj.ano_letivo` ou
-`obj.situacao`, esses objetos ja foram carregados. Sem a antecipacao, a pagina
-pode produzir o problema N+1: uma consulta para os alunos e varias consultas
-adicionais para seus relacionamentos.
-
-Nesse exemplo, `Aluno.locals` tambem limita o conjunto conforme o escopo local
-do usuario, e `exclude()` retira determinados alunos de minicurso. Por isso, o
-metodo completo nao deve ser substituido apenas pelo atributo abaixo.
-
-Para um admin simples, a alternativa declarativa seria:
-
-```python
-class AlunoAdmin(ModelAdminPlus):
-    list_select_related = ('ano_letivo', 'pessoa_fisica', 'situacao')
-```
-
-Essa forma nao substitui o `get_queryset()` quando ele contem escolha de
-manager, filtros de escopo ou outras regras. Para `ManyToManyField` e relacoes
-reversas, o recurso adequado costuma ser `prefetch_related()`, nao
-`list_select_related`.
-
-### 2.10. `date_hierarchy`
-
-`date_hierarchy` adiciona, acima da listagem, uma navegacao temporal por ano,
-mes e dia. O valor deve ser o nome de um `DateField` ou `DateTimeField` do
-model. O recurso apenas filtra a listagem; ele nao altera as datas gravadas.
-
-**Origem:** recurso nativo do Django.  
-**Declaracao padrao:** `django/contrib/admin/options.py:624`.  
-**Envio ao `ChangeList`:** `django/contrib/admin/options.py:822-845`.
-
-Exemplo real do EDU:
-
-**Arquivo:** `edu/admin.py`  
-**Linhas:** `2369-2383`
-
-```python
-class HistoricoImportacaoAdmin(ModelAdminPlus):
-    list_display = (
-        'id', 'data', 'total_alunos_criados', 'total_alunos_atualizados',
-        'total_matriculas_periodo_criadas',
-        'total_matriculas_periodo_atualizadas',
-    )
-    list_display_icons = True
-    list_per_page = 15
-    form = HistoricoImportacaoForm
-    date_hierarchy = 'data'
-    export_to_xls = True
-```
-
-**Para acompanhar:** acesse `/admin/edu/historicoimportacao/` e utilize os
-atalhos de ano, mes e dia exibidos acima da tabela. Outro exemplo esta em
-`edu/admin.py:2398-2405`: `MaterialAulaAdmin` usa
-`date_hierarchy = 'data_cadastro'`.
-
-Em tabelas grandes, vale conferir os indices do campo e o custo das consultas
-por periodo. `date_hierarchy` melhora a navegacao, mas nao substitui a analise
-de desempenho do banco.
-
-### 2.11. `list_editable`
-
-`list_editable` transforma determinadas colunas em campos de formulario dentro
-da propria listagem. O usuario altera uma ou mais linhas e envia todas pelo
-botao de salvamento da pagina.
-
-**Origem:** recurso nativo do Django.  
-**Declaracao padrao:** `django/contrib/admin/options.py:621`.  
-**Processamento:** `ModelAdmin.changelist_view()` em
-`django/contrib/admin/options.py:2002-2045` cria, valida e salva um formset com os
-registros modificados.
-
-O EDU nao possui atualmente um uso explicito desse atributo. Um exemplo real
-e simples do SUAP esta no cadastro de paises:
-
-**Admin:** `comum/admin.py:219-225`  
-**Model:** `comum/models.py:1370-1381`
-
-```python
-class PaisAdmin(ModelAdminPlus):
-    list_display = ('nome', 'codigo', 'codigo_censup', 'excluido')
-    ordering = ('excluido', 'nome', 'codigo', 'codigo_censup')
-    list_filter = [CustomTabListFilter, 'excluido', 'codigo_censup']
-    list_editable = ['codigo_censup']
-    search_fields = ('nome', 'codigo')
-```
-
-Na tela `/admin/comum/pais/`, `codigo_censup` pode ser alterado sem abrir cada
-registro. O campo esta simultaneamente em `list_display`, para existir como
-coluna, e em `list_editable`, para receber um controle editavel.
-
-Regras importantes:
-
-- o campo precisa estar em `list_display`;
-- o campo nao pode estar tambem em `list_display_links`;
-- o campo do model precisa permitir edicao;
-- todas as linhas enviadas passam por validacao antes do salvamento;
-- a edicao em massa merece teste cuidadoso, pois modifica dados reais.
-
-Use esse recurso para alteracoes simples e independentes. Quando a mudanca
-exigir confirmacoes, efeitos em outros objetos ou uma sequencia de negocio,
-prefira um formulario ou uma action especifica.
-
-### 2.12. Diferenca entre inclusao e edicao: `add_form`, `change_form` e `add_fieldsets`
-
-Incluir e editar usam a mesma infraestrutura do Django Admin, mas representam
-estados diferentes:
-
-| Inclusao | Edicao |
-|---|---|
-| URL termina em `/add/` | URL termina em `/<pk>/change/` |
-| ainda nao existe objeto salvo | o objeto e carregado do banco |
-| `get_form(request, obj=None)` | `get_form(request, obj=objeto)` |
-| form recebe uma instancia nova | form recebe `instance=objeto` |
-| exige permissao `add` | exige permissao `change` |
-| `change=False` nos hooks de salvamento | `change=True` nos hooks |
-| termina em `response_add()` | termina em `response_change()` |
-
-No momento em que `get_form()` e chamado, o criterio principal e `obj`:
-
-```text
-obj is None     -> tela de inclusao
-obj possui pk   -> tela de edicao
-```
-
-#### 2.12.1. O que pertence ao Django e o que pertence ao SUAP
-
-O `ModelAdmin` nativo possui `form`, `fieldsets`, `get_form()` e
-`get_fieldsets()`. Por padrao, `form` atende tanto a inclusao quanto a edicao.
-
-O comportamento generico de escolher automaticamente `add_form`,
-`change_form` e `add_fieldsets` e uma extensao do `ModelAdminPlus`, declarada
-em `djtools/contrib/admin/options/__init__.py:143-146`:
-
-```python
-add_form = None
-change_form = None
-add_fieldsets = None
-```
-
-Esses atributos permitem separar os dois fluxos sem sobrescrever integralmente
-`add_view()`, `change_view()` ou `get_form()`.
-
-> O `UserAdmin` do proprio Django tambem usa nomes como `add_form` e
-> `add_fieldsets`, mas isso e uma customizacao daquela classe. No SUAP, o
-> `ModelAdminPlus` oferece esse comportamento de forma generica aos admins que
-> herdam dele.
-
-#### 2.12.2. Como `ModelAdminPlus.get_form()` escolhe a classe
-
-A implementacao esta em
-`djtools/contrib/admin/options/__init__.py:392-409`:
-
-```python
-def get_form(self, request, obj=None, **kwargs):
-    defaults = {}
-
-    if obj is None and self.add_form:
-        defaults['form'] = self.add_form
-
-    if obj and self.change_form:
-        defaults['form'] = self.change_form
-
-    defaults.update(kwargs)
-    FormClass = super().get_form(request, obj, **defaults)
-    FormClass.request = request
-    return FormClass
-```
-
-Ordem de escolha:
-
-| Operacao | Primeira opcao | Fallback |
-|---|---|---|
-| inclusao | `add_form`, quando definido | `form` do Admin |
-| edicao | `change_form`, quando definido | `form` do Admin |
-| nenhuma classe personalizada | `form` padrao | `ModelForm` gerado pelo Django |
-
-Depois da escolha, `super().get_form()` preserva a construcao nativa do
-`ModelForm`. Por fim, o DJTools torna `request` disponivel na classe escolhida,
-permitindo que o form consulte usuario, grupos e parametros da requisicao.
-
-#### 2.12.3. Funcao de cada atributo
-
-**`form`**
-
-E a classe principal do formulario administrativo. Funciona nos dois fluxos e
-serve como fallback quando nao ha uma classe mais especifica.
-
-```python
-form = DemandaChangeForm
-```
-
-**`add_form`**
-
-Seleciona um `ModelForm` apenas quando `obj is None`. E apropriado quando a
-criacao deve:
-
-- expor menos campos;
-- solicitar confirmacao ou dados iniciais;
-- preencher estado, autor ou setor automaticamente;
-- possuir validacoes diferentes da edicao.
-
-```python
-add_form = DemandaAddForm
-```
-
-**`change_form`**
-
-Seleciona um `ModelForm` apenas quando ja existe um objeto. E apropriado para
-proteger campos imutaveis depois da criacao ou oferecer operacoes exclusivas
-do registro salvo.
-
-```python
-change_form = ProcessoEditarForm
-```
-
-**`add_fieldsets`**
-
-Define os grupos e a ordem dos campos somente na inclusao. Ele nao e uma
-classe de formulario e nao possui `clean()` nem `save()`:
-
-```python
-add_fieldsets = (
-    ('Dados Gerais', {'fields': ('area', 'titulo', 'descricao')}),
-)
-```
-
-O `ModelAdminPlus.get_fieldsets()`, em
-`djtools/contrib/admin/options/__init__.py:387-390`, faz a selecao:
-
-```python
-def get_fieldsets(self, request, obj=None):
-    if not obj and self.add_fieldsets:
-        return self.add_fieldsets
-    return super().get_fieldsets(request, obj)
-```
-
-Na edicao, o fluxo volta para `fieldsets`, `fields` ou para os campos inferidos
-pelo Django.
-
-#### 2.12.4. Formulario e fieldset nao sao a mesma coisa
-
-```text
-add_form/change_form -> campos, widgets, validacao, cleaned_data e save()
-add_fieldsets         -> grupos, ordem e campos apresentados na inclusao
-fieldsets             -> grupos, ordem e campos apresentados na edicao/fallback
-```
-
-As duas configuracoes precisam ser compativeis. Um nome presente em
-`add_fieldsets` deve existir no model ou no `add_form`; caso contrario, o
-Django pode gerar `FieldError`. Um campo existente no form, mas ausente do
-fieldset selecionado, nao sera apresentado nessa tela administrativa.
-
-`fieldsets` ajuda a limitar a superficie do form criado pelo Admin, mas nao
-deve ser usado isoladamente como regra de seguranca. Permissoes, campos do
-`ModelForm`, `readonly_fields` e validacoes de backend continuam necessarios.
-
-#### 2.12.5. Exemplo completo: `DemandaAdmin`
-
-O exemplo real esta em `demandas/admin.py:228-265`:
-
-```python
-class DemandaAdmin(ModelAdminPlus, CompareVersionAdminPlus):
-    add_form = DemandaAddForm
-    form = DemandaChangeForm
-
-    fieldsets = (
-        ('Dados Gerais', {
-            'fields': (
-                'area', 'tipo', 'titulo', 'descricao', 'prazo_legal',
-                'tags', 'privada', 'consolidacao_sempre_visivel',
-                'dependencia',
-            )
-        }),
-        ('Interessados', {
-            'fields': ('demandantes', 'interessados', 'observadores')
-        }),
-        ('Atendimento', {
-            'fields': ('analistas', 'desenvolvedores')
-        }),
-        ('Dados de Homologacao', {
-            'fields': (
-                'ambiente_homologacao', 'id_repositorio',
-                'url_validacao', 'senha_homologacao',
-            )
-        }),
-        ('Dados de Implantacao', {'fields': ('id_merge_request',)}),
-    )
-
-    add_fieldsets = (
-        ('Dados Gerais', {
-            'fields': ('area', 'titulo', 'descricao', 'privada', 'dependencia')
-        }),
-        ('Interessados', {
-            'fields': ('demandantes', 'interessados', 'observadores')
-        }),
-    )
-```
-
-Na inclusao:
-
-```text
-GET /admin/demandas/demanda/add/
-  -> obj=None
-  -> get_form() escolhe DemandaAddForm
-  -> get_fieldsets() escolhe add_fieldsets
-  -> tela mostra apenas Dados Gerais e Interessados
-```
-
-`DemandaAddForm`, em `demandas/forms.py:204-251`, limita os campos de criacao,
-restringe as areas conforme `self.request.user` e pode remover
-`consolidacao_sempre_visivel` para quem nao e analista.
-
-Na edicao:
-
-```text
-GET /admin/demandas/demanda/<pk>/change/
-  -> obj=demanda existente
-  -> change_form nao foi definido
-  -> get_form() usa o fallback form = DemandaChangeForm
-  -> get_fieldsets() usa fieldsets completo
-  -> tela inclui Atendimento, Homologacao e Implantacao
-```
-
-`DemandaChangeForm`, iniciado em `demandas/forms.py:254`, acrescenta campos
-operacionais, como `analistas` e `desenvolvedores`, que so fazem sentido depois
-que a demanda existe.
-
-Esse exemplo usa `form` como formulario de edicao. Ele poderia declarar
-`change_form = DemandaChangeForm`; o resultado da selecao seria equivalente,
-mas `form` continua sendo um fallback explicito para outros contextos do Admin.
-
-#### 2.12.6. Exemplo explicito de `change_form`: `ProcessoAdmin`
-
-`ProcessoAdmin`, em `processo_eletronico/admin.py:223-225`, declara:
-
-```python
-form = ProcessoForm
-change_form = ProcessoEditarForm
-```
-
-O resultado e:
-
-```text
-Inclusao, obj=None
-  -> nao ha add_form
-  -> usa form = ProcessoForm
-
-Edicao, obj existente
-  -> ha change_form
-  -> usa ProcessoEditarForm
-```
-
-`ProcessoForm`, em `processo_eletronico/forms.py:173-258`, possui os dados
-necessarios para criar o processo, incluindo interessados, assunto, nivel de
-acesso e hipotese legal. `ProcessoEditarForm`, nas linhas `261-307`, reduz seu
-`Meta.fields` a `tipo_processo` e `setor_criacao` e especializa a validacao da
-edicao. A tela final ainda combina essa classe com `get_fieldsets()` e
-`get_readonly_fields()` de `ProcessoAdmin`, em
-`processo_eletronico/admin.py:241-265`. Portanto, a classe escolhida e o layout
-administrativo devem ser analisados em conjunto.
-
-Esse e o principal motivo para formularios separados: um campo necessario na
-criacao pode se tornar imutavel ou exigir outro procedimento depois que o
-objeto passa a existir.
-
-#### 2.12.7. Ciclo completo dos dois fluxos
-
-```text
-INCLUSAO
-/add/
-  -> has_add_permission()
-  -> add_view()
-  -> get_form(request, obj=None)
-  -> add_form ou form
-  -> get_fieldsets(request, obj=None)
-  -> add_fieldsets ou fieldsets inferidos
-  -> form.is_valid()
-  -> save_model(..., change=False)
-  -> save_related(..., change=False)
-  -> response_add()
-
-EDICAO
-/<pk>/change/
-  -> get_object() dentro do queryset permitido
-  -> has_change_permission(request, obj)
-  -> change_view()
-  -> get_form(request, obj)
-  -> change_form ou form
-  -> get_fieldsets(request, obj)
-  -> fieldsets ou campos inferidos
-  -> form.is_valid()
-  -> save_model(..., change=True)
-  -> save_related(..., change=True)
-  -> response_change()
-```
-
-Tanto `add_view()` quanto `change_view()` do `ModelAdminPlus` executam em
-`transaction.atomic`, em
-`djtools/contrib/admin/options/__init__.py:411-439`. Isso mantem o salvamento do
-objeto principal e das relacoes no mesmo limite transacional do fluxo.
-
-#### 2.12.8. Como acompanhar o fluxo
-
-1. Abra `demandas/admin.py:228-265` e identifique `add_form`, `form`,
-   `add_fieldsets` e `fieldsets`.
-2. Acesse `/admin/demandas/demanda/add/` sem salvar e anote as secoes
-   apresentadas.
-3. Abra uma demanda existente em
-   `/admin/demandas/demanda/<pk>/change/` e compare as secoes adicionais.
-4. Coloque um breakpoint em
-   `djtools/contrib/admin/options/__init__.py:398-406`.
-5. Na inclusao, confirme `obj is None` e
-   `FormClass.__name__ == 'DemandaAddForm'`.
-6. Na edicao, confirme que existe `obj` e que o fallback selecionado e
-   `DemandaChangeForm`.
-7. Abra `ProcessoAdmin` para comparar um caso que declara explicitamente
-   `change_form`.
-
-Erros comuns:
-
-- colocar validacao dentro de `add_fieldsets`, que apenas descreve layout;
-- declarar `add_form` e esperar que ele seja usado na edicao;
-- declarar `change_form` e esquecer o formulario de inclusao;
-- listar no fieldset um campo ausente do form;
-- usar somente a ausencia visual de um campo como protecao;
-- sobrescrever `get_form()` sem chamar `super()` e perder a selecao feita pelo
-  `ModelAdminPlus`.
-
-### 2.13. Admin x formulario personalizado
-
-Os dois podem usar `ModelForm` e alterar o mesmo model, mas distribuem as
-responsabilidades de maneiras diferentes. O cadastro de aluno oferece dois
-fluxos reais para comparar.
-
-| Admin | View personalizada |
-|---|---|
-| URLs geradas pelo `AdminSite` | URL declarada pela aplicacao |
-| Templates administrativos padrao | Template escolhido pela view |
-| Permissoes de model integradas | View deve declarar sua autorizacao |
-| `ModelAdmin` coordena o fluxo | Funcao ou classe de view coordena o fluxo |
-| Bom para CRUD interno | Bom para processo de negocio especifico |
-| Actions, filtros e inlines prontos | Interface totalmente controlada |
-
-#### 2.13.1. Fluxo real A: `AlunoAdmin` com `AlunoForm`
-
-**Objetivo:** oferecer o CRUD administrativo amplo do aluno.  
-**Listagem:** `/admin/edu/aluno/`  
-**Edicao:** `/admin/edu/aluno/<pk>/change/`
-
-Nao existe uma entrada correspondente em `edu/urls.py`. A URL e gerada porque
-o model foi registrado no `AdminSite`.
-
-**Admin:** `edu/admin.py:1601-1626`  
-**Registro:** `edu/admin.py:1870`
-
-```python
-class AlunoAdmin(ModelAdminPlus):
-    # ... configuracoes da listagem omitidas ...
-    form = AlunoForm
-    fieldsets = AlunoForm.fieldsets
-
-    def get_queryset(self, request):
-        return super().get_queryset(request, Aluno.locals).exclude(
-            turmaminicurso__gerar_matricula=False
-        ).select_related('ano_letivo', 'pessoa_fisica', 'situacao')
-
-
 admin.site.register(Aluno, AlunoAdmin)
 ```
 
-`form` escolhe a classe que valida e salva. `fieldsets` reutiliza a organizacao
-visual declarada no proprio formulario. `get_queryset()` delimita quais alunos
-podem participar da tela e antecipa relacionamentos usados na listagem.
-
-**Form:** `edu/forms.py:215-314`
-
-```python
-class AlunoForm(forms.ModelFormPlus):
-    # Campos complementares e fieldsets omitidos neste recorte.
-
-    class Meta:
-        model = Aluno
-        exclude = ()
-
-    def save(self, *args, **kwargs):
-        self.instance.pessoa_fisica.nome_registro = self.cleaned_data['nome']
-        # ... demais dados da pessoa fisica ...
-        self.instance.pessoa_fisica.save()
-        return super().save(*args, **kwargs)
-```
-
-O `save()` personalizado e importante: alguns campos apresentados pelo form
-pertencem a `PessoaFisica`, embora a instancia principal seja `Aluno`.
-
-Fluxo da requisicao:
+Esse registro permite ao `AdminSite` relacionar:
 
 ```text
-GET /admin/edu/aluno/<pk>/change/
-    -> AdminSite encontra AlunoAdmin
-    -> AlunoAdmin.change_view() verifica acesso e carrega o objeto
-    -> get_form() seleciona AlunoForm
-    -> template administrativo exibe o formulario
-
-POST /admin/edu/aluno/<pk>/change/
-    -> AlunoForm recebe POST e FILES com instance=aluno
-    -> validacao do formulario
-    -> AlunoForm.save()
-    -> salvamento e registro administrativo da alteracao
-    -> resposta definida pelo fluxo do Admin
+aplicacao: edu
+model:     aluno
+admin:     AlunoAdmin
+endereco:  /admin/edu/aluno/
 ```
 
-O `ModelAdminPlus` ainda envolve `change_view()` em transacao e acrescenta
-breadcrumbs, titulo e request ao form em
-`djtools/contrib/admin/options/__init__.py:392-439`.
+As paginas nao devem ser confundidas:
 
-#### 2.13.2. Fluxo real B: view personalizada para editar o RG
+| URL | Responsabilidade |
+|---|---|
+| `/admin/` | Indice geral das aplicacoes e models permitidos |
+| `/admin/edu/` | Indice dos cadastros da aplicacao EDU |
+| `/admin/edu/aluno/` | Listagem produzida por `AlunoAdmin` |
 
-**Objetivo:** alterar somente tres dados do RG do aluno em uma tela orientada a
-essa tarefa.  
-**URL:** `/edu/editar_rg_aluno/<pk>/`
+O conteudo padrao do indice vem de
+`django/contrib/admin/templates/admin/index.html`, dentro do pacote Django
+instalado. O SUAP personaliza a estrutura visual geral em
+`comum/templates/admin/base.html` e `comum/templates/admin/base_site.html`.
+Em `comum/templates/admin/base.html:152-156`, o menu principal do sistema e
+renderizado com `{{ menu_as_html|safe }}`. Portanto, o indice nativo do Admin e
+o menu principal do SUAP sao mecanismos relacionados, mas diferentes.
 
-**Rota:** `edu/urls.py:580-582`
+> Nao aparecer no indice nao e, isoladamente, uma regra de seguranca. Quando
+> uma URL e acessada diretamente, a view administrativa volta a verificar
+> `has_view_permission()`, `has_add_permission()`, `has_change_permission()` ou
+> `has_delete_permission()`.
+
+Os registros carregados podem ser consultados no shell:
 
 ```python
-path(
-    'editar_rg_aluno/<int:pk>/',
-    views.editar_rg_aluno,
-),
+from django.contrib import admin
+
+for model, model_admin in admin.site._registry.items():
+    if model._meta.app_label == 'edu':
+        print(model._meta.model_name, type(model_admin).__name__)
 ```
 
-Aqui a aplicacao declara explicitamente o endereco e a view. Nao ha
-`AdminSite` nem `ModelAdmin` no encaminhamento.
+---
 
-**View:** `edu/views.py:15306-15333`
+## Etapa 3 - Configuracoes essenciais
+
+### 3. Visao geral
+
+A configuracao deve tornar a listagem util sem expor dados indevidos nem criar
+consultas excessivamente caras. O exemplo integrado sera `AlunoAdmin`, em
+`edu/admin.py:1601-1615`:
 
 ```python
-@permission_required('edu.change_aluno')
-@rtr('editar_rg_aluno.html')
-def editar_rg_aluno(request, pk):
-    title = 'Editar Documento RG'
-    aluno = get_object_or_404(
-        Aluno.locals.select_related('curso_campus'),
-        pk=pk,
-    )
-
-    if not perms.tem_permissao_realizar_procedimentos(request.user, aluno):
-        raise PermissionDenied()
-
-    form = EditarRgAlunoForm(
-        data=request.POST or None,
-        instance=aluno,
-    )
-
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        return httprr(
-            f'/edu/aluno/{aluno.matricula}/?tab=dados_pessoais',
-            'Dados do RG atualizados com sucesso.',
-        )
-
-    return locals()
+class AlunoAdmin(ModelAdminPlus):
+    list_display = ('get_foto', 'get_info_principal', 'periodo_letivo',
+                    'ano_letivo', 'get_pasta')
+    list_filter = (CustomTabListFilter, 'ano_letivo', 'periodo_letivo',
+                   'situacao', 'curso_campus__diretoria__setor__uo',
+                   'curso_campus', 'polo', 'curso_campus__modalidade')
+    list_filter_autocomplete_form_filters = {
+        'curso_campus': [
+            ('curso_campus__diretoria__setor__uo', 'diretoria__setor__uo')
+        ]
+    }
+    list_display_icons = True
+    export_to_xls = True
+    export_to_sophia = True
+    list_per_page = 15
+    ordering = ('-id',)
+    form = AlunoForm
+    fieldsets = AlunoForm.fieldsets
+    search_fields = ('pessoa_fisica__nome_registro',
+                     'pessoa_fisica__search_fields_optimized',
+                     'registroemissaodiploma__pasta', 'numero_pasta')
 ```
 
-A view torna explicitas as decisoes que o Admin normalmente coordena:
+### 3.1. Tabela das configuracoes
 
-- exige `edu.change_aluno` no decorador;
-- busca pelo manager contextual `Aluno.locals`;
-- aplica uma autorizacao relacionada ao aluno encontrado;
-- diferencia GET de POST;
-- fornece `instance=aluno` para editar, em vez de criar;
-- chama `is_valid()` e `save()`;
-- escolhe a mensagem e o destino apos o sucesso.
+| Opcao | Origem | Funcao | Exemplo no EDU |
+|---|---|---|---|
+| `list_display` | Django | Define as colunas | `edu/admin.py:1602` |
+| `list_display_links` | Django | Escolhe colunas que abrem o objeto | Herdado/calculado pelo Admin |
+| `list_filter` | Django | Cria filtros da listagem | `edu/admin.py:1603` |
+| `search_fields` | Django | Define os campos da busca | `edu/admin.py:1615` |
+| `ordering` | Django | Define a ordem inicial | `edu/admin.py:1611` |
+| `list_per_page` | Django | Limita itens por pagina | `edu/admin.py:1610` |
+| `fieldsets` | Django | Agrupa e ordena campos do form | `edu/admin.py:1613` |
+| `get_queryset()` | Django, estendido pelo DJTools | Define o conjunto inicial e o escopo dos registros | `edu/admin.py:1625-1626` |
+| `list_filter_autocomplete_form_filters` | DJTools | Encadeia filtros autocomplete | `edu/admin.py:1604-1606` |
+| `list_display_icons` | DJTools | Adiciona icones de visualizar/editar | `edu/admin.py:1607` |
+| `export_to_xls` | DJTools | Habilita exportacao XLS | `edu/admin.py:1608` |
+| `export_to_sophia` | Customizacao IFG | Gera CSV no formato Sophia | `edu/admin.py:1609` |
 
-**Form:** `edu/forms.py:14817-14843`
+### 3.2. `list_display`
+
+Aceita campos do model e metodos calculados do model ou do admin. Cada nome se
+torna uma coluna. Em `AlunoAdmin`, `periodo_letivo` e `ano_letivo` sao dados do
+objeto; `get_foto`, `get_info_principal` e `get_pasta` sao metodos.
+
+Exemplo real de coluna calculada em `edu/admin.py:1862-1868`:
 
 ```python
-class EditarRgAlunoForm(forms.ModelFormPlus):
-    SUBMIT_LABEL = 'Salvar'
+get_info_principal.short_description = 'Dados Principais'
+get_info_principal.admin_order_field = 'pessoa_fisica__nome'
 
-    class Meta:
-        model = Aluno
-        fields = ('numero_rg', 'uf_emissao_rg', 'orgao_emissao_rg')
+def get_pasta(self, obj):
+    return obj.numero_pasta or '-'
 
-    def clean_numero_rg(self):
-        numero_rg = self.cleaned_data.get('numero_rg')
-        return numero_rg.strip() if numero_rg else None
+get_pasta.short_description = 'Nº Pasta'
 ```
 
-Ao usar `fields`, o formulario limita deliberadamente a superficie de edicao.
-`clean_numero_rg()` normaliza o valor antes do salvamento.
+`short_description` define o cabecalho. `admin_order_field` informa ao Admin
+qual campo do ORM deve ordenar uma coluna calculada.
 
-**Template:** `edu/templates/editar_rg_aluno.html:1-20`
+### 3.3. `list_display_links`
 
-```django
-{% extends super_template %}
-{% block content %}
-    {% box 'Aluno' %}
-        <!-- Identificacao resumida do aluno. -->
-    {% endbox %}
-
-    {% box 'Documento RG' %}
-        {% render_form form %}
-    {% endbox %}
-{% endblock %}
-```
-
-O template decide o contexto visual da tarefa e usa `{% render_form form %}`
-para renderizar o `ModelFormPlus`.
-
-#### 2.13.3. O que a comparacao ensina
-
-```text
-Admin:
-model + ModelAdmin + ModelForm -> CRUD padronizado e abrangente
-
-View personalizada:
-URL + view + ModelForm + template -> tarefa delimitada e fluxo explicito
-```
-
-O primeiro fluxo e adequado para manutencao interna ampla. O segundo reduz os
-campos, aplica uma regra contextual e devolve o usuario para a aba correta do
-aluno. Nao duplique no Admin uma operacao complexa que ja possui view segura e
-bem testada; quando fizer sentido, o Admin pode apenas oferecer um link para a
-view especializada.
-
-<a id="etapa-3"></a>
-
-## Etapa 3 — Recursos do SUAP
-
-### 3.1. `ModelAdmin` x `ModelAdminPlus`
-
-`ModelAdmin` pertence ao Django. `ModelAdminPlus` pertence ao DJTools/SUAP e
-especializa o Admin nativo. Ele nao recria o CRUD: herda sua base e acrescenta
-convencoes usadas pelo SUAP.
-
-Forma resumida:
-
-```text
-ModelAdminPlus
-    = ModelAdmin do Django
-    + metaclasse de customizacao LPS
-    + templates administrativos do DJTools
-    + campos de data/hora padronizados
-    + ChangeListPlus
-    + request disponivel no admin e no form
-    + icones, tabs, exportacao e action bar
-```
-
-**Arquivo:** `djtools/contrib/admin/options/__init__.py`  
-**Linhas:** `87-146`
+Define quais colunas levam para a tela de edicao/visualizacao:
 
 ```python
-class ModelAdminPlus(admin.ModelAdmin, metaclass=MetaModelAdminPlus):
-    change_list_template = 'djtools/templates/adminutils/change_list.html'
-    change_form_template = 'djtools/templates/adminutils/change_form.html'
-    formfield_overrides = FORMFIELD_OVERRIDES
-
-    list_display_icons = False
-    show_count_on_tabs = False
-    export_to_xls = False
-    list_xls_display = None
-    preserve_filters = True
-    avoid_short_search = True
-    filters_ajax = True
-
-    add_form = None
-    change_form = None
-    add_fieldsets = None
+list_display_links = ('descricao',)
 ```
 
-#### 3.1.1. Heranca: a base continua sendo o Django
+Se nao for informado, o Django normalmente transforma a primeira coluna de
+`list_display` em link. Quando `list_display_icons = True`, o
+`ModelAdminPlus.get_list_display()`, em
+`djtools/contrib/admin/options/__init__.py:208-220`, insere
+`show_list_display_icons` no inicio e pode retirar os links quando o usuario
+nao possui permissao.
 
-A declaracao possui duas informacoes diferentes:
+### 3.4. `list_filter`
+
+Define filtros estruturados. O Django escolhe a interface de acordo com o
+tipo do campo; caminhos com `__` atravessam relacionamentos:
 
 ```python
-class ModelAdminPlus(admin.ModelAdmin, metaclass=MetaModelAdminPlus):
+list_filter = (
+    'ano_letivo',
+    'situacao',
+    'curso_campus__diretoria__setor__uo',
+)
 ```
 
-- `admin.ModelAdmin` e a **classe-base**: fornece URLs, listagem, forms,
-  permissoes, inclusao, alteracao, exclusao, actions e historico;
-- `MetaModelAdminPlus` e a **metaclasse**: participa da criacao da propria
-  classe e permite aplicar customizacoes LPS.
+Assim, o ultimo item percorre `Aluno -> CursoCampus -> Diretoria -> Setor ->
+Unidade Organizacional`. No SUAP, `ChangeListPlus.get_filters()`, em
+`djtools/contrib/admin/views/__init__.py:50-117`, detecta relacionamentos e
+pode criar um filtro autocomplete com os valores permitidos pelo queryset.
 
-Nao confunda metaclasse com `class Meta`. A metaclasse controla como uma classe
-Python e construida; uma `class Meta` interna apenas fornece opcoes para APIs
-como models e forms.
+### 3.5. `search_fields`
 
-No Django 4.1.5, `BaseModelAdmin` usa a metaclasse
-`forms.MediaDefiningClass`, em
-`django/contrib/admin/options.py:117-132`. `MetaModelAdminPlus` herda dessa
-mesma metaclasse, mantendo o mecanismo que combina arquivos CSS e JavaScript
-declarados pelas classes e formularios.
-
-Consequencia pratica: tudo que funciona em `ModelAdmin`, como `list_display`,
-`search_fields`, `list_filter`, `ordering` e `readonly_fields`, continua
-disponivel. O desenvolvedor so precisa sobrescrever um metodo quando a
-configuracao declarativa nao for suficiente.
-
-#### 3.1.2. `MetaModelAdminPlus` e LPS
-
-LPS significa **Linha de Produto de Software**. E um mecanismo proprio do SUAP
-para permitir variacoes de uma instalacao sem copiar integralmente o arquivo
-principal.
-
-**Implementacao:** `djtools/lps.py:14-18`, `djtools/lps.py:44-64` e
-`djtools/lps.py:112-117`  
-**Configuracao padrao:** `suap/settings_base.py:738`
+Define onde a caixa de texto procura. Dois sublinhados tambem atravessam
+relacionamentos:
 
 ```python
-LPS = ''
+search_fields = (
+    'pessoa_fisica__nome_registro',
+    'registroemissaodiploma__pasta',
+    'numero_pasta',
+)
 ```
 
-Com o valor vazio, nao ha variante ativa. Quando `settings.LPS` possui um nome,
-a metaclasse executa este fluxo durante a criacao de cada classe de admin:
+Por padrao, o Django usa uma busca semelhante a `icontains`. Prefixos como
+`^campo` e `=campo` alteram o lookup. O SUAP sobrescreve
+`get_search_results()` em
+`djtools/contrib/admin/options/__init__.py:261-293`: normaliza os termos e,
+com `avoid_short_search = True`, pode ignorar termos muito curtos.
 
-```text
-classe encontrada em <app>/admin.py
-    -> verifica settings.LPS e INSTALLED_APPS
-    -> procura <app>/lps/<LPS>/admin.py
-    -> procura nesse modulo uma classe com o mesmo nome
-    -> copia seus atributos para a classe principal
-    -> conclui a criacao da classe
-```
+### 3.6. `ordering`
 
-Trecho essencial de `djtools/lps.py:44-64`:
+Define a ordem inicial da listagem:
 
 ```python
-class MetaModelAdminPlus(forms.MediaDefiningClass):
-    def __new__(mcs, name, bases, attrs):
-        if is_lps(attrs):
-            app = '.'.join(attrs['__module__'].split('.')[:-1])
-            module = __import__(
-                f'{app}.lps.{settings.LPS}.admin',
-                fromlist=['admin'],
-            )
-            if hasattr(module, name):
-                custom_class = getattr(module, name)
-                set_attrs_klass(attrs, custom_class.__dict__.items())
-
-        return super().__new__(mcs, name, bases, attrs)
+ordering = ('-id',)
 ```
 
-O recorte foi reorganizado para leitura; o codigo real envolve a importacao em
-`try/except`. `set_attrs_klass()` copia os atributos, exceto metadados internos
-como `__module__` e `__dict__`. Como a implementacao real captura
-`Exception` e segue sem propagar o erro, a ausencia da customizacao nao impede
-a inicializacao; durante uma depuracao, porem, tambem e necessario verificar se
-houve erro de importacao dentro do arquivo LPS.
+O sinal `-` significa ordem decrescente. Em `/admin/edu/aluno/`, os maiores
+IDs aparecem primeiro. Uma ordenacao escolhida pelo usuario no cabecalho tem
+prioridade; depois vem `ModelAdmin.ordering`; sem ele, vale `Model.Meta.ordering`.
 
-Exemplo real disponivel no projeto:
+### 3.7. `list_per_page`
 
-**Arquivo:** `rh/lps/demo_lps/admin.py`  
-**Linhas:** `11-25`
+E o numero maximo de registros por pagina. `AlunoAdmin` usa `15`. Para uma
+demonstracao temporaria em cadastro pequeno, poderia ser alterado para:
 
 ```python
-class ServidorAdmin:
-    list_filter = get_uo_setor_listfilter() + (
-        'excluido',
-        'cargo_emprego_area',
-    )
-
-
-class CargoEmpregoAdmin:
-    readonly_fields = []
-    form = CargoEmpregoForm
+list_per_page = 5
 ```
 
-Se `settings.LPS = 'demo_lps'`, esses atributos sao copiados para as classes de
-mesmo nome criadas pelo admin principal de RH. Os demais atributos e metodos
-permanecem os originais.
+Isso nao e uma opcao diferente: e o mesmo atributo com outro valor. Ele reduz
+os objetos renderizados por pagina, mas a consulta ainda pode realizar
+contagens, joins e ordenacoes. Portanto, nao corrige sozinho problemas de
+desempenho.
 
-Ao investigar uma diferenca entre instalacoes, verifique sempre:
+### 3.8. `list_filter_autocomplete_form_filters`
 
-1. o valor de `settings.LPS`;
-2. se existe `<app>/lps/<LPS>/admin.py`;
-3. se ha nele uma classe com o mesmo nome do admin investigado.
+Este nome longo representa uma configuracao especifica do DJTools para criar
+**dependencia entre filtros autocomplete**.
 
-#### 3.1.3. Templates administrativos
-
-O `ModelAdminPlus` substitui os nomes dos templates usados pelo Django:
+Em `AlunoAdmin`, `edu/admin.py:1604-1606`:
 
 ```python
-change_list_template = 'djtools/templates/adminutils/change_list.html'
-change_form_template = 'djtools/templates/adminutils/change_form.html'
-```
-
-As declaracoes estao em
-`djtools/contrib/admin/options/__init__.py:119-122`. Esses arquivos nao
-descartam o Admin nativo; eles o estendem:
-
-- `djtools/templates/adminutils/change_list.html:1-100` estende
-  `admin/change_list.html` e acrescenta comportamento para filtros, tabs,
-  actions e atualizacao por AJAX;
-- `djtools/templates/adminutils/change_form.html:1-36` estende
-  `admin/change_form.html`, inclui o JavaScript de formsets e adapta action bar,
-  botoes e modo somente leitura.
-
-Assim, a logica principal ainda vem do Django, enquanto o DJTools altera a
-apresentacao e os pontos de interacao usados pelo SUAP.
-
-#### 3.1.4. `formfield_overrides`
-
-`formfield_overrides` e um atributo nativo de `ModelAdmin`; no Django, seu
-valor padrao e `{}` em `django/contrib/admin/options.py:117-132`. Ele permite
-trocar o campo de formulario e o widget gerados para um tipo de campo do model.
-
-O DJTools define o mapeamento em
-`djtools/contrib/admin/options/__init__.py:52-56`:
-
-```python
-FORMFIELD_OVERRIDES = {
-    models.DateTimeField: {
-        'form_class': DateTimeFieldPlus,
-        'widget': RegionalDateTimeWidget,
-    },
-    models.DateField: {
-        'form_class': DateFieldPlus,
-        'widget': RegionalDateWidget,
-    },
-    models.TimeField: {
-        'form_class': TimeFieldPlus,
-        'widget': RegionalTimeWidget,
-    },
+list_filter_autocomplete_form_filters = {
+    'curso_campus': [
+        ('curso_campus__diretoria__setor__uo', 'diretoria__setor__uo')
+    ]
 }
 ```
 
-`ModelAdminPlus.formfield_overrides = FORMFIELD_OVERRIDES`, na linha `122`, faz
-com que forms gerados pelo Admin usem os campos e widgets regionais do SUAP.
-Por exemplo, `DateFieldPlus`, implementado em
-`djtools/forms/fields/__init__.py:204-219`, aceita os formatos previstos pelo
-projeto e rejeita anos anteriores a 1900. Os widgets estao em
-`djtools/forms/widgets/__init__.py:76-106`.
+Leitura didatica:
 
-Essa configuracao funciona como padrao. Um form personalizado ainda pode
-declarar explicitamente outro campo ou widget para uma necessidade especifica.
+1. o filtro dependente e `curso_campus`;
+2. o valor selecionado no filtro de unidade/diretoria e enviado ao
+   autocomplete;
+3. no queryset de cursos, esse valor corresponde a `diretoria__setor__uo`;
+4. o autocomplete passa a oferecer cursos coerentes com a unidade escolhida.
 
-#### 3.1.5. Ciclo de inicializacao
+A configuracao e lida em
+`djtools/contrib/admin/filters/__init__.py:183-202`. Nas linhas `194-197`, o
+filtro procura seu nome no dicionario e atribui os pares a `form_filters`.
 
-O Admin passa por duas fases que nao devem ser confundidas.
+### 3.9. `list_display_icons`
 
-**Fase 1 - inicializacao da aplicacao**
+Recurso do `ModelAdminPlus`. Quando verdadeiro, acrescenta uma coluna com
+icones de visualizar e editar conforme a permissao do usuario.
 
-1. Django importa `edu/admin.py`.
-2. Python encontra `class AlunoAdmin(ModelAdminPlus)`.
-3. `MetaModelAdminPlus.__new__()` verifica uma possivel customizacao LPS.
-4. `admin.site.register(Aluno, AlunoAdmin)` registra a associacao.
-5. `AdminSite.register()` instancia `AlunoAdmin(Aluno, admin.site)` e guarda a
-   instancia em `_registry`.
+Implementacao:
 
-O passo 5 esta na implementacao nativa
-`django/contrib/admin/sites.py:136-149`. O construtor de `ModelAdmin`, em
-`django/contrib/admin/options.py:649-653`, armazena `model`, `model._meta` e
-`admin_site`.
+- `djtools/contrib/admin/options/__init__.py:163-187`: monta os icones;
+- `djtools/contrib/admin/options/__init__.py:208-220`: insere a coluna em
+  `list_display`;
+- `edu/admin.py:1607`: habilita o recurso para alunos.
 
-Depois, `ModelAdminPlus.__init__()`, em
-`djtools/contrib/admin/options/__init__.py:189-192`, chama o construtor do
-Django e, quando o admin nao declarou `search_fields`, procura um campo de
-busca padrao no model.
+Ele modifica a navegacao visual, mas nao concede permissao. Os metodos
+`has_view_permission()` e `has_change_permission()` continuam sendo a fonte da
+decisao.
 
-**Fase 2 - atendimento de cada requisicao**
+### 3.10. `export_to_xls`
+
+Recurso do DJTools. Em `AlunoAdmin`, `export_to_xls = True` habilita o botao.
+O fluxo e:
 
 ```text
-URL do Admin
-    -> AdminSite localiza a instancia registrada
-    -> ModelAdminPlus recebe a requisicao
-    -> escolhe ChangeListPlus ou form de inclusao/edicao
-    -> aplica queryset, permissoes e validacao
-    -> renderiza o template do DJTools
-    -> devolve HttpResponse
+botao -> ?export_to_xls=1
+      -> ModelAdminPlus.changelist_view()
+      -> get_current_queryset() preserva busca e filtros
+      -> tasks.admin_export('xls', ...)
+      -> XlsResponse
 ```
 
-Na listagem, `get_changelist()`, em
-`djtools/contrib/admin/options/__init__.py:200-206`, salva o request em
-`self.request` e devolve `ChangeListPlus`. Essa classe herda do `ChangeList` do
-Django e customiza buscas e filtros em
-`djtools/contrib/admin/views/__init__.py:19-125`.
+Referencias:
 
-Na inclusao ou edicao, `get_form()`, em
-`djtools/contrib/admin/options/__init__.py:392-409`, escolhe `add_form` ou
-`change_form`, chama a implementacao nativa e disponibiliza o request na classe
-do formulario. `add_view()` e `change_view()`, nas linhas `411-439`, tambem
-acrescentam breadcrumbs e executam dentro de `transaction.atomic`.
+- botao: `djtools/contrib/admin/options/__init__.py:327-334`;
+- tratamento da requisicao: linhas `348-366`;
+- reconstrucao do queryset atual: linhas `237-259`;
+- tarefa e montagem das linhas: `djtools/tasks.py:48-89`.
 
-Comparacao resumida:
+Por padrao, as colunas exportadas sao `list_xls_display` ou `list_display`.
+Um metodo `to_xls()` no admin pode substituir a montagem automatica.
 
-| Recurso | `ModelAdmin` | `ModelAdminPlus` |
-|---|---|---|
-| CRUD administrativo | Sim | Sim, por heranca |
-| `list_display`, filtros e busca | Sim | Sim, por heranca |
-| Forms e inlines | Sim | Sim, com integracoes adicionais |
-| Templates de listagem do SUAP | Nao | Sim |
-| Icones de visualizar/editar | Nao | `list_display_icons` |
-| Tabs padronizadas | Nao | `get_tabs()` e `CustomTabListFilter` |
-| Exportacao XLS integrada | Nao | `export_to_xls` |
-| Action bar do SUAP | Nao | `get_action_bar()` |
-| Customizacao por LPS | Nao | `MetaModelAdminPlus` |
-| Confirmacao de exclusao por senha | Nao | Implementada em `delete_view()` |
+### 3.11. `export_to_sophia`
 
-### 3.2. Icones da listagem
+Esta opcao foi acrescentada nesta instalacao para a Issue 1019 e nao pertence
+ao Django. Em `edu/admin.py:1609`, ela habilita um CSV para o Sophia.
 
-`list_display_icons` e um recurso do `ModelAdminPlus`, nao do `ModelAdmin`
-nativo. Ele troca o uso de uma coluna textual como link por uma primeira
-coluna de acoes, identificada pelo cabecalho `#`.
+O botao e montado em
+`djtools/contrib/admin/options/__init__.py:335-343`; a requisicao e desviada
+nas linhas `367-373`; e `djtools/tasks.py:82-88` devolve `CsvResponse` com
+codificacao `cp1252`, delimitador `|` e campos vazios no lugar de `None`.
 
-Exemplo real em `AlunoAdmin`, `edu/admin.py:1601-1608`:
+### 3.12. `fieldsets`
+
+Recurso nativo do Django que organiza os campos do formulario em grupos e
+define sua ordem. Ele nao cria validacao nem campo de banco.
+
+`AlunoAdmin` reutiliza a configuracao do form:
 
 ```python
-class AlunoAdmin(ModelAdminPlus):
-    list_display = (
-        'get_foto',
-        'get_info_principal',
-        'periodo_letivo',
-        'ano_letivo',
-        'get_pasta',
-    )
-    list_display_icons = True
+fieldsets = AlunoForm.fieldsets
 ```
 
-Ao abrir `/admin/edu/aluno/`, o resultado conceitual e:
+O valor esta em `edu/forms.py:252-287`, com secoes como `Identificacao`,
+`Endereco`, `Contato` e `RG`. Exemplo reduzido:
+
+```python
+fieldsets = (
+    ('Identificacao', {'fields': ('nome', 'nome_social', ('cpf', 'passaporte'))}),
+    ('RG', {'fields': ('numero_rg', 'uf_emissao_rg',
+                      'orgao_emissao_rg', 'data_emissao_rg')}),
+)
+```
+
+Uma tupla interna, como `('cpf', 'passaporte')`, orienta o SUAP a apresentar
+os campos juntos na mesma linha visual.
+
+### 3.13. `get_queryset()` e escopo dos dados
+
+#### 3.13.1. Conceito
+
+Um `QuerySet` representa uma consulta do ORM. No Admin, `get_queryset()`
+define o **conjunto inicial de objetos** sobre o qual serao aplicados busca,
+filtros, ordenacao e paginacao.
 
 ```text
-+---+------+----------------------+---------+-----+
-| # | Foto | Informacoes do aluno | Periodo | Ano |
-+---+------+----------------------+---------+-----+
-| ver/editar | ... | ...              | ...     | ... |
-+---+------+----------------------+---------+-----+
+get_queryset(request)
+    -> conjunto inicial permitido
+    -> search_fields e termo pesquisado
+    -> list_filter e filtros da URL
+    -> ordering
+    -> paginacao
+    -> linhas exibidas
 ```
 
-Os simbolos acima representam os links de visualizar e editar; os icones reais
-sao renderizados pelo conjunto visual do DJTools.
-
-#### 3.2.1. Como a coluna e acrescentada
-
-`ModelAdminPlus.get_list_display()`, em
-`djtools/contrib/admin/options/__init__.py:208-220`, nao modifica a tupla
-declarada permanentemente. Ele produz a lista efetiva para a requisicao:
+Na implementacao nativa, `ModelAdmin.get_queryset()` parte do manager padrao
+do model. De forma simplificada:
 
 ```python
-def get_list_display(self, request):
-    list_display = tuple(self.list_display[:])
-    if self.list_display_icons:
-        if (
-            request.user.has_perm(view_permission)
-            or request.user.has_perm(change_permission)
-        ):
-            list_display = ('show_list_display_icons',) + list_display
-        else:
-            self.list_display_links = None
-    return list_display
+def get_queryset(self, request):
+    qs = self.model._default_manager.get_queryset()
+    ordering = self.get_ordering(request)
+    if ordering:
+        qs = qs.order_by(*ordering)
+    return qs
 ```
 
-Assim, `show_list_display_icons` passa a ser a primeira coluna somente quando
-o usuario possui permissao de visualizacao ou alteracao do model.
+O codigo pertence ao pacote instalado em
+`django/contrib/admin/options.py:408-418` e e herdado por `ModelAdmin`.
+Portanto, quando
+uma classe de admin nao sobrescreve esse metodo, a listagem normalmente parte
+de todos os registros fornecidos pelo manager padrao e aplica a ordenacao do
+Admin.
 
-#### 3.2.2. O que faz `show_list_display_icons()`
+O argumento `request` permite considerar o usuario autenticado, seus grupos,
+campus ou outros dados da requisicao. Isso torna `get_queryset()` um ponto
+central para definir **escopo de visualizacao**.
 
-A implementacao completa esta em
-`djtools/contrib/admin/options/__init__.py:163-187`. Para cada objeto da
-pagina, o metodo:
+#### 3.13.2. Permissao nao e o mesmo que escopo
 
-1. identifica a tab atual, quando houver;
-2. verifica `has_change_permission(request, obj)`;
-3. adiciona o icone de visualizacao e o de edicao quando pode alterar;
-4. quando nao pode alterar, verifica `has_view_permission(request, obj)` e
-   adiciona apenas a visualizacao;
-5. junta os links em HTML seguro.
+As duas verificacoes respondem perguntas diferentes:
 
-Trecho central:
-
-```python
-if self.has_change_permission(self.request, obj):
-    icons_html.append(view_object_icon(obj, view_object_url_complement))
-    icons_html.append(edit_object_icon(obj))
-elif self.has_view_permission(self.request, obj):
-    icons_html.append(view_object_icon(obj, view_object_url_complement))
-```
-
-Os helpers estao em `djtools/templatetags/tags/utils.py:123-160`:
-
-- `view_object_icon()` usa `obj.get_absolute_url()` quando disponivel; caso
-  contrario, usa a visualizacao administrativa criada pelo DJTools;
-- `edit_object_icon()` monta a URL administrativa de alteracao.
-
-Como `self.request` e necessario, `ModelAdminPlus.get_changelist()` o armazena
-antes de montar as colunas, em
-`djtools/contrib/admin/options/__init__.py:200-206`.
-
-#### 3.2.3. Customizacao por objeto
-
-O metodo pode ser sobrescrito quando a exibicao do icone depende do proprio
-registro. Exemplo real em `enquete/admin.py:84-89`:
-
-```python
-def show_list_display_icons(self, obj):
-    if not obj.eh_responsavel(self.request.user):
-        return mark_safe('')
-    return super().show_list_display_icons(obj)
-
-show_list_display_icons.short_description = '#'
-```
-
-Nesse caso, os icones desaparecem para enquetes das quais o usuario nao e
-responsavel. Isso melhora a interface, mas a seguranca da URL ainda deve ser
-garantida por `has_view_permission()`, `has_change_permission()` e pelo escopo
-do queryset.
-
-### 3.3. Exportacao
-
-`export_to_xls` tambem pertence ao `ModelAdminPlus`. O exemplo principal deste
-encontro e o `AlunoAdmin`, que ativa o recurso em `edu/admin.py:1608`:
-
-```python
-export_to_xls = True
-```
-
-#### 3.3.1. Do botao ao queryset filtrado
-
-`get_action_bar()`, em
-`djtools/contrib/admin/options/__init__.py:310-346`, parte de
-`request.get_full_path()` e acrescenta `export_to_xls=1`. Os parametros atuais
-nao sao descartados.
-
-Exemplo: se a tela estiver filtrada por ano, situacao e busca:
-
-```text
-/admin/edu/aluno/?ano_letivo__id__exact=2026&situacao__id__exact=1&q=Paloma
-```
-
-o botao aponta para algo equivalente a:
-
-```text
-/admin/edu/aluno/?ano_letivo__id__exact=2026&situacao__id__exact=1&q=Paloma&export_to_xls=1
-```
-
-O template do DJTools ainda atualiza esse link quando os filtros da listagem
-mudam por AJAX, em `djtools/templates/adminutils/change_list.html:140-141`.
-
-Ao receber a requisicao, `ModelAdminPlus.changelist_view()`, em
-`djtools/contrib/admin/options/__init__.py:348-366`:
-
-1. detecta `export_to_xls`;
-2. remove apenas esse parametro de `request.GET`;
-3. chama `get_current_queryset(request)`;
-4. envia o queryset para `tasks.admin_export()`.
-
-A remocao e importante: os demais parametros continuam disponiveis para que
-`get_current_queryset()`, implementado nas linhas `237-259`, reconstrua um
-`ChangeList` com a mesma busca, filtros, tab e ordenacao da tela.
-
-#### 3.3.2. A tarefa de exportacao
-
-`admin_export()` esta em `djtools/tasks.py:48-89` e recebe quatro dados
-principais:
-
-```python
-tasks.admin_export('xls', queryset, request, self)
-```
-
-- `'xls'`: formato solicitado;
-- `queryset`: registros resultantes da listagem filtrada;
-- `request`: contexto da requisicao;
-- `self`: instancia do `AlunoAdmin`.
-
-A funcao possui o decorador `@task('Exportar para XLS/CSV Admin')`. O mecanismo
-de `djtools/assincrono/__init__.py:39-118` cria um registro de tarefa e executa
-o processamento em thread ou Celery, conforme a configuracao. A resposta
-inicial redireciona para:
-
-```text
-/djtools/process2/<uuid-da-tarefa>/
-```
-
-Essa tela acompanha o progresso sem manter a requisicao original bloqueada.
-
-#### 3.3.3. `to_xls()` personalizado
-
-Dentro da tarefa, `admin_export()` procura dinamicamente um metodo chamado
-`to_xls`. O `AlunoAdmin` o implementa em `edu/admin.py:1664-1681`:
-
-```python
-def to_xls(self, request, queryset, processo):
-    header = [
-        '#', 'Nome', 'Matricula', 'Curso', 'Campus', 'Polo',
-        'Situacao', 'E-mail Academico', 'E-mail Pessoal',
-        'Ano/Periodo Letivo',
-    ]
-    rows = [header]
-    for idx, obj in enumerate(processo.iterate(queryset)):
-        rows.append([
-            idx + 1,
-            obj.get_nome_social_composto(),
-            obj.matricula,
-            obj.curso_campus,
-            obj.curso_campus.diretoria.setor.uo,
-            format(obj.polo),
-            obj.situacao,
-            format(obj.pessoa_fisica.email),
-            obj.pessoa_fisica.email_secundario,
-            f'{obj.ano_letivo.ano}.{obj.periodo_letivo:d}',
-        ])
-    return rows
-```
-
-`processo.iterate(queryset)` atualiza o progresso durante a iteracao. Se o
-Admin nao possuir `to_xls()`, `admin_export()` usa `list_xls_display` ou
-`list_display` para montar cabecalho e linhas automaticamente.
-
-#### 3.3.4. Geracao e resposta final
-
-As linhas sao entregues a `XlsResponse(rows, processo=task)`. Em
-`djtools/utils/__init__.py:545-658`, essa funcao:
-
-- valida a matriz de linhas;
-- cria a planilha com `xlwt`;
-- grava um arquivo temporario quando existe uma tarefa;
-- finaliza o processo com a mensagem `Arquivo gerado com sucesso` e o caminho
-  do arquivo.
-
-Fluxo completo:
-
-```text
-botao Exportar para XLS
-  -> URL atual + export_to_xls=1
-  -> changelist_view()
-  -> get_current_queryset() preserva filtros e busca
-  -> task admin_export()
-  -> AlunoAdmin.to_xls()
-  -> XlsResponse()
-  -> arquivo disponivel na tela de acompanhamento
-```
-
-> A exportacao usa o queryset filtrado, mas nao necessariamente apenas os 15
-> itens da pagina atual. Por isso, desempenho, escopo de `locals` e permissoes
-> devem ser revisados com o mesmo cuidado aplicado a listagem.
-
-### 3.4. Tabs
-
-Para usar tabs, o admin inclui `CustomTabListFilter` em `list_filter`, retorna
-os nomes em `get_tabs()` e implementa um metodo para cada aba.
-
-Exemplo de `AlunoAdmin`, `edu/admin.py:1633-1649`:
-
-```python
-def tab_suap(self, request, queryset):
-    return queryset.filter(
-        codigo_academico__isnull=True,
-        matriz__id__isnull=False,
-    )
-
-tab_suap.short_description = 'Matriculados no Suap'
-
-
-def get_tabs(self, request):
-    return ['tab_suap', 'tab_q_academico', 'tab_integralizados']
-```
-
-`CustomTabListFilter`, implementado em
-`djtools/contrib/admin/filters/__init__.py:149-171`, transforma os nomes
-retornados por `get_tabs()` em opcoes e executa o metodo da aba sobre o queryset.
-
-Regra didatica:
-
-```text
-get_tabs() informa quais abas existem.
-tab_xxx() informa quais registros pertencem a cada aba.
-short_description informa o texto exibido.
-```
-
-### 3.5. Request disponivel no admin e no form
-
-O `request` identifica a requisicao atual. Por meio de `request.user`, o codigo
-conhece o usuario autenticado; por `request.GET` e `request.POST`, conhece os
-parametros enviados. O Django Admin entrega o request aos metodos do
-`ModelAdmin`, mas nao o coloca automaticamente dentro do `ModelForm`.
-
-O `ModelAdminPlus` cria essa integracao em dois pontos:
-
-- `get_changelist()`, em
-  `djtools/contrib/admin/options/__init__.py:200-206`, armazena o request em
-  `self.request` para uso nas colunas, tabs e demais metodos da listagem;
-- `get_form()`, em
-  `djtools/contrib/admin/options/__init__.py:392-409`, coloca o request na
-  classe de formulario retornada pelo Django.
-
-Trecho do segundo ponto:
-
-```python
-FormClass = super().get_form(request, obj, **defaults)
-FormClass.request = request
-return FormClass
-```
-
-Depois, quando o Admin instancia `FormClass`, o form consegue acessar
-`self.request`. Esse comportamento e proprio do DJTools. No Django puro, um
-`ModelForm` administrativo nao recebe o request automaticamente.
-
-#### 3.5.1. Exemplo real: `AulaCampoAdmin` e `AulaCampoForm`
-
-**Tela:** `/admin/edu/aulacampo/<pk>/change/`
-
-O admin seleciona explicitamente o formulario.
-
-**Arquivo:** `edu/admin.py`  
-**Linhas:** `2842-2860`  
-**Registro:** `edu/admin.py:2894`
-
-```python
-class AulaCampoAdmin(ModelAdminPlus):
-    # ... configuracoes da listagem omitidas ...
-    ordering = ('data_partida',)
-    list_display_icons = True
-    form = AulaCampoForm
-    date_hierarchy = 'data_partida'
-
-
-admin.site.register(AulaCampo, AulaCampoAdmin)
-```
-
-Ao abrir a tela, `ModelAdminPlus.get_form()` devolve `AulaCampoForm` com o
-request atual associado. O construtor do form usa o usuario desse request.
-
-**Arquivo:** `edu/forms.py`  
-**Linhas:** `7956-7981`
-
-```python
-class AulaCampoForm(forms.ModelFormPlus):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        if not in_group(self.request.user, 'Administrador Acadêmico'):
-            if self.instance.situacao != AulaCampo.SITUACAO_AGENDADA:
-                self.fields['configuracao_seguro'].widget.attrs[
-                    'disabled'
-                ] = 'disabled'
-                self.fields['uo'].widget.attrs['disabled'] = 'disabled'
-                self.fields['descricao'].widget.attrs[
-                    'readonly'
-                ] = 'readonly'
-                self.fields['finalidade'].widget.attrs[
-                    'readonly'
-                ] = 'readonly'
-                self.fields['roteiro'].widget.attrs['readonly'] = 'readonly'
-                self.fields['data_partida'].widget.attrs[
-                    'readonly'
-                ] = 'readonly'
-                self.fields['data_chegada'].widget.attrs[
-                    'readonly'
-                ] = 'readonly'
-                self.fields['responsaveis'].widget.attrs[
-                    'disabled'
-                ] = 'disabled'
-                self.fields['arquivo'].widget.attrs['disabled'] = 'disabled'
-```
-
-A decisao combina dois dados:
-
-```text
-self.request.user                     -> quem esta usando a tela
-self.instance.situacao                -> estado atual da aula de campo
-```
-
-Resultado:
-
-| Usuario e situacao | Efeito no formulario |
+| Mecanismo | Pergunta respondida |
 |---|---|
-| Administrador Academico | A restricao desse bloco nao e aplicada |
-| Outro usuario e aula agendada | A restricao desse bloco nao e aplicada |
-| Outro usuario e aula em outra situacao | Campos ficam desabilitados ou somente leitura |
+| `has_view_permission()` | O usuario pode abrir este cadastro? |
+| `get_queryset()` | Quais registros desse cadastro o usuario pode consultar? |
 
-Os campos afetados incluem campus, descricao, finalidade, roteiro, datas,
-responsaveis, seguro e arquivo. Portanto, o request nao e apenas armazenado:
-ele efetivamente modifica o formulario apresentado ao usuario.
+Um usuario pode possuir `edu.view_aluno` e, portanto, ter acesso ao cadastro,
+mas ainda precisar visualizar somente os alunos do polo ou da unidade sob sua
+responsabilidade.
 
-Fluxo completo:
+Essa separacao evita dois erros comuns:
 
-```text
-usuario abre /admin/edu/aulacampo/<pk>/change/
-    -> AulaCampoAdmin recebe request
-    -> ModelAdminPlus.get_form() escolhe AulaCampoForm
-    -> FormClass.request recebe o request
-    -> AulaCampoForm.__init__() consulta self.request.user
-    -> widgets sao adaptados ao grupo e a situacao
-    -> change_form.html renderiza o formulario resultante
-```
+- retirar toda a tela de quem deveria consultar apenas um subconjunto;
+- conceder acesso a todos os registros somente porque o usuario pode abrir o
+  cadastro.
 
-`readonly` e `disabled` orientam a interface, mas nao devem ser a unica defesa
-de uma regra sensivel. A permissao da operacao deve ser conferida no Admin ou
-no backend, e valores importantes devem ser validados no form ou no model.
+No Admin, o queryset tambem participa da localizacao do objeto nas telas de
+edicao e exclusao. Por isso, restringi-lo ajuda a impedir que um objeto fora do
+escopo seja encontrado apenas pela digitacao direta de sua URL. As permissoes
+da operacao continuam necessarias; queryset e permissao devem atuar juntos.
 
-### 3.6. Templates administrativos do SUAP
+#### 3.13.3. Extensao feita pelo `ModelAdminPlus`
 
-O `ModelAdminPlus` aponta suas telas para templates do DJTools em
-`djtools/contrib/admin/options/__init__.py:119-122`:
-
-```python
-change_list_template = 'djtools/templates/adminutils/change_list.html'
-change_form_template = 'djtools/templates/adminutils/change_form.html'
-```
-
-Eles nao reescrevem o Admin inteiro. Ambos usam heranca de templates para
-preservar a estrutura nativa e substituir apenas blocos determinados.
-
-#### 3.6.1. Template de listagem: `change_list.html`
-
-**Arquivo:** `djtools/templates/adminutils/change_list.html`  
-**Linhas:** `1-204`
-
-A primeira linha revela a heranca:
-
-```django
-{% extends "admin/change_list.html" %}
-```
-
-`admin/change_list.html` pertence ao Django instalado. O template do DJTools
-recebe seus blocos e redefine os pontos necessários.
-
-**Bloco `extrahead`, linhas `5-164`**
-
-```django
-{% block extrahead %}
-    <script src="/static/comum/js/pace.min.js"></script>
-    {{ block.super }}
-    {{ media.js }}
-    <!-- JavaScript de actions, filtros, tabs e atualizacao AJAX. -->
-{% endblock %}
-```
-
-- `{{ block.super }}` preserva o conteudo definido pelo template pai;
-- `{{ media.js }}` inclui os scripts exigidos pelos forms e widgets;
-- `cl.has_filters` e `cl.search_fields` controlam o codigo dos filtros;
-- `cl.model_admin.filters_ajax` decide entre atualizar a pagina por AJAX ou
-  navegar normalmente.
-
-**Bloco `action-bar`, linhas `166-198`**
-
-```django
-{% block action-bar %}
-    <ul class="action-bar">
-        {% block object-tools-items %}
-            {% for i in object_tools_items %}
-                <a href="{{ i.url }}" class="btn {{ i.css_class }}">
-                    {{ i.label }}
-                </a>
-            {% endfor %}
-        {% endblock %}
-        {% help_button %}
-    </ul>
-{% endblock %}
-```
-
-O codigo real tambem trata botoes com subitens. A variavel
-`object_tools_items` nao nasce no template: ela e enviada pelo
-`ModelAdminPlus.changelist_view()`.
-
-**Bloco `content`, linhas `200-204`**
-
-```django
-{% block content %}
-    <div id="content-main">
-        {% include 'content_main_admin.html' %}
-    </div>
-{% endblock %}
-```
-
-O conteudo principal fica isolado em `#content-main`, permitindo substituir
-somente essa regiao quando busca, filtros ou tabs usam AJAX.
-
-#### 3.6.2. Como o contexto da listagem e montado
+O DJTools modifica a assinatura do metodo para aceitar opcionalmente outro
+manager.
 
 **Arquivo:** `djtools/contrib/admin/options/__init__.py`  
-**Linhas:** `310-385`
-
-`get_action_bar()` produz uma lista de dicionarios com `url`, `label` e
-`css_class`. Depois, `changelist_view()` acrescenta essa lista ao contexto:
-
-```python
-more_context = dict(
-    object_tools_items=self.get_action_bar(request),
-    title=self.model._meta.verbose_name_plural,
-    disable_general_tabs=True,
-)
-more_context.update(extra_context or {})
-utils.breadcrumbs_add(request, more_context)
-retorno = super().changelist_view(request, more_context)
-```
-
-O `super()` chama o fluxo nativo do Django, que acrescenta variaveis como:
-
-| Variavel | Conteudo |
-|---|---|
-| `cl` | Objeto `ChangeListPlus` com resultados, filtros e configuracao |
-| `media` | CSS e JavaScript dos forms e widgets |
-| `action_form` | Formulario das actions, quando elas existem |
-| `opts` | Metadados do model |
-| `has_add_permission` | Resultado da permissao de inclusao |
-
-Em uma requisicao AJAX, as linhas `382-383` renderizam apenas
-`djtools/templates/adminutils/content_main_admin.html`, usando o mesmo
-`context_data`. Por isso a tabela pode ser atualizada sem renderizar novamente
-toda a pagina.
-
-#### 3.6.3. Template de inclusao e edicao: `change_form.html`
-
-**Arquivo:** `djtools/templates/adminutils/change_form.html`  
-**Linhas:** `1-37`
-
-Tambem existe heranca do template nativo:
-
-```django
-{% extends "admin/change_form.html" %}
-{% load admin_modify %}
-```
-
-Blocos principais:
-
-| Bloco | Linhas | Funcao no SUAP |
-|---|---:|---|
-| `admin_change_form_document_ready` | `6-9` | Preserva `block.super` e inclui `formset_handlers.js` |
-| `action-bar` | `11-15` | Exibe a barra com o botao de ajuda |
-| `object-tools` | `17` | Esvazia a barra padrao do Django |
-| `form_top` | `19-23` | Exibe `info_extra`, quando fornecido |
-| `bodyclass` | `25` | Adiciona a classe `readonly` ao corpo |
-| `submit_buttons_top` | `27-31` | Oculta botoes superiores no modo somente leitura |
-| `submit_buttons_bottom` | `33-37` | Oculta botoes inferiores no modo somente leitura |
-
-Exemplo:
-
-```django
-{% block submit_buttons_bottom %}
-    {% if not readonly %}
-        {% submit_row %}
-    {% endif %}
-{% endblock %}
-```
-
-#### 3.6.4. Como o contexto do formulario e montado
-
-`ModelAdminPlus.change_view()`, em
-`djtools/contrib/admin/options/__init__.py:419-439`, carrega o objeto, verifica
-`has_change_permission()`, define o titulo, inclui breadcrumbs e repassa o
-contexto para o `change_view()` nativo:
-
-```python
-readonly = extra_context and extra_context.get('readonly', False)
-more_context = dict(
-    title='Visualizar %s' % obj if readonly else 'Editar %s' % obj
-)
-utils.breadcrumbs_add(request, more_context)
-more_context.update(extra_context or {})
-return super().change_view(
-    request, object_id, form_url, more_context
-)
-```
-
-O Django acrescenta o form, os inlines, `media`, `opts`, dados do objeto e
-permissoes. Finalmente, `change_form_template` escolhe o template do DJTools.
-
-Fluxo resumido:
-
-```text
-ModelAdminPlus.change_view()
-    -> contexto adicional do SUAP
-    -> ModelAdmin.change_view() do Django
-    -> form + inlines + permissoes + media
-    -> djtools/.../change_form.html
-    -> admin/change_form.html como template pai
-```
-
-Como esses templates sao globais para todo `ModelAdminPlus`, uma mudanca neles
-possui impacto amplo. Para uma necessidade isolada, prefira metodos como
-`get_action_bar()` ou configure `change_list_template` e
-`change_form_template` apenas no admin interessado.
-
-<a id="etapa-4"></a>
-
-## Etapa 4 — Estudo integrado de `AlunoAdmin`
-
-### 4.1. Como acessar
-
-1. Entrar com um usuario que possua acesso aos alunos.
-2. Abrir **Ensino > Alunos** ou acessar `/admin/edu/aluno/`.
-3. Realizar uma busca por nome ou pasta.
-4. Aplicar filtros de ano, periodo, situacao ou campus.
-5. Alternar entre as tabs.
-6. Abrir um registro pelos icones da primeira coluna.
-
-Use dados de teste ou homologacao se a demonstracao incluir alteracao. A
-listagem pode ser estudada sem gravar nenhuma mudanca.
-
-### 4.2. Mapa dos arquivos
-
-| Responsabilidade | Arquivo e linhas |
-|---|---|
-| Model `Aluno` | `edu/models/alunos.py:107` em diante |
-| Form administrativo | `edu/forms.py:215` em diante |
-| Configuracao do admin | `edu/admin.py:1601-1870` |
-| Registro no `AdminSite` | `edu/admin.py:1870` |
-| Implementacao de `ModelAdminPlus` | `djtools/contrib/admin/options/__init__.py:87-625` |
-| Teste que acessa a listagem | `edu/tests.py:1246-1249` |
-| Teste que acessa a edicao | `edu/tests.py:3662-3668` |
-
-### 4.3. Configuracao inicial comentada
-
-**Arquivo:** `edu/admin.py`  
-**Linhas:** `1601-1626`
-
-```python
-class AlunoAdmin(ModelAdminPlus):
-    # Colunas apresentadas em /admin/edu/aluno/.
-    list_display = (
-        'get_foto',
-        'get_info_principal',
-        'periodo_letivo',
-        'ano_letivo',
-        'get_pasta',
-    )
-
-    # CustomTabListFilter cria as abas; os demais itens sao filtros de campo.
-    list_filter = (
-        CustomTabListFilter,
-        'ano_letivo',
-        'periodo_letivo',
-        'situacao',
-        'curso_campus__diretoria__setor__uo',
-        'curso_campus',
-        'polo',
-        'curso_campus__modalidade',
-    )
-
-    # Recursos do ModelAdminPlus.
-    list_display_icons = True
-    export_to_xls = True
-
-    # Recursos herdados do Django.
-    list_per_page = 15
-    ordering = ('-id',)
-
-    # Form e layout usados na inclusao/edicao.
-    form = AlunoForm
-    fieldsets = AlunoForm.fieldsets
-
-    search_fields = (
-        'pessoa_fisica__nome_registro',
-        'pessoa_fisica__search_fields_optimized',
-        'registroemissaodiploma__pasta',
-        'numero_pasta',
-    )
-
-    def get_queryset(self, request):
-        return (
-            super().get_queryset(request, Aluno.locals)
-            .exclude(turmaminicurso__gerar_matricula=False)
-            .select_related('ano_letivo', 'pessoa_fisica', 'situacao')
-        )
-```
-
-### 4.4. Leitura do `get_queryset()`
-
-`get_queryset()` determina o conjunto inicial de registros que o admin pode
-usar. Busca, filtros, tabs, ordenacao e paginacao atuam depois sobre esse
-conjunto.
-
-No exemplo:
-
-```python
-super().get_queryset(request, Aluno.locals)
-```
-
-passa explicitamente um manager ao `ModelAdminPlus`. Sua implementacao de
-`get_queryset()`, em `djtools/contrib/admin/options/__init__.py:234-235`,
-devolve esse manager quando ele e informado:
+**Linhas:** `234-235`
 
 ```python
 def get_queryset(self, request, manager=None, *args, **kwargs):
     return manager or super().get_queryset(request)
 ```
 
-#### 4.4.1. Onde `Aluno.locals` e definido
+Leitura do codigo:
 
-Os managers do model estao declarados em `edu/models/alunos.py:250-258`:
+- sem `manager`, o metodo chama o `ModelAdmin` do Django;
+- com `manager`, usa a fonte de consulta recebida;
+- managers do Django encaminham chamadas como `filter()`, `exclude()` e
+  `select_related()` para seu `QuerySet`;
+- isso permite ao Admin escolher entre `Model.objects`, `Model.locals` ou
+  outro manager especializado.
+
+Essa possibilidade de passar o manager como segundo argumento e uma
+customizacao do DJTools. Ela nao faz parte da assinatura padrao do
+`ModelAdmin.get_queryset()` do Django.
+
+#### 3.13.4. Exemplo principal: `AlunoAdmin`
+
+**Arquivo:** `edu/admin.py`  
+**Linhas:** `1625-1626`
 
 ```python
+def get_queryset(self, request):
+    return (
+        super()
+        .get_queryset(request, Aluno.locals)
+        .exclude(turmaminicurso__gerar_matricula=False)
+        .select_related('ano_letivo', 'pessoa_fisica', 'situacao')
+    )
+```
+
+O codigo original esta em uma unica linha; acima ele foi apenas formatado para
+facilitar a leitura. Cada etapa possui uma responsabilidade:
+
+1. `super().get_queryset(request, Aluno.locals)` usa o manager local em vez do
+   manager geral;
+2. `exclude(turmaminicurso__gerar_matricula=False)` retira matriculas de
+   minicurso configuradas para nao gerar matricula;
+3. `select_related(...)` antecipa os relacionamentos usados pela listagem e
+   reduz consultas repetidas ao banco;
+4. o resultado ainda sera refinado pela busca, filtros, ordem e paginacao do
+   `ChangeListPlus`.
+
+O model declara seus managers em `edu/models/alunos.py:250-256`:
+
+```python
+# Manager geral do model.
 objects = AlunoManager()
+
+# Manager que pode aplicar restricoes relacionadas ao usuario atual.
 locals = AlunoLocalManager()
+
+# Outros recortes de negocio reutilizaveis.
 com_matriz = AlunosComMatrizManager()
 ativos = AlunosAtivosManager()
 caracterizados = AlunosCaracterizadosManager()
 nao_fic = AlunosNaoFICManager()
 fic = AlunosFICManager()
-locals_uo = FiltroUnidadeOrganizacionalManager(
-    'curso_campus__diretoria__setor__uo'
-)
 ```
 
-`objects` e `locals` acessam o mesmo model e a mesma tabela. A diferenca e o
-`QuerySet` inicial produzido por cada manager.
+`objects` e `locals` consultam a mesma tabela de alunos. A diferenca esta no
+`QuerySet` que cada manager entrega.
 
-`AlunoLocalManager` esta implementado em `edu/managers.py:671-682`:
+#### 3.13.5. Como `Aluno.locals` calcula o escopo
+
+`Aluno.locals` e uma instancia de `AlunoLocalManager`, implementada em
+`edu/managers.py:671-682`:
 
 ```python
 class AlunoLocalManager(models.Manager):
     def get_queryset(self):
         qs = super().get_queryset()
         user = tl.get_user()
+
         if user and user.groups.filter(
             name='Coordenador de Polo EAD'
         ).exists():
             if user.groups.filter(
                 permissions__codename='view_aluno'
             ).count() == 1:
+                from edu.models import CoordenadorPolo
+
                 ids = CoordenadorPolo.objects.filter(
                     funcionario=user.get_profile()
                 ).values_list('polo__id')
                 return qs.filter(polo__id__in=ids)
+
         return qs
 ```
 
-Leitura da regra atual:
+O `tl.get_user()`, importado em `edu/managers.py:7`, recupera o usuario do
+contexto local da requisicao. A regra atual funciona assim:
 
-- o usuario e obtido do contexto local da requisicao por `tl.get_user()`;
-- para um **Coordenador de Polo EAD** cujo acesso a `view_aluno` venha apenas
-  desse perfil, o manager local devolve somente alunos dos polos coordenados;
-- nos demais casos, essa implementacao especifica devolve o queryset geral.
+- parte do queryset geral com `super().get_queryset()`;
+- verifica se o usuario pertence ao grupo `Coordenador de Polo EAD`;
+- verifica a condicao especifica de possuir apenas uma associacao de grupo com
+  a permissao `view_aluno`;
+- descobre os polos coordenados pelo funcionario;
+- devolve somente alunos cujos polos estejam nessa lista;
+- quando a condicao nao se aplica, devolve o queryset sem esse recorte.
 
-Portanto, e importante nao generalizar: `Aluno.locals` nao aplica atualmente
-um filtro de campus ou diretoria para todos os perfis. Outros models do EDU
-possuem managers `locals` com regras diferentes. O comportamento deve sempre
-ser conferido na classe de manager concreta.
+> O nome `locals` nao possui um comportamento universal no Django. Ele e uma
+> convencao usada em models do SUAP, e cada classe de manager precisa ser lida
+> para descobrir sua regra real. No caso atual de `AlunoLocalManager`, a
+> restricao implementada e especifica para coordenadores de polo EAD.
 
-#### 4.4.2. Consulta resultante
+#### 3.13.6. Segundo exemplo: escopo por unidade organizacional
 
-Para o coordenador de polo descrito pela regra, o queryset inicial equivale a:
+`HorarioCampus` mostra um manager local com outra regra.
 
-```python
-ids = CoordenadorPolo.objects.filter(
-    funcionario=request.user.get_profile()
-).values_list('polo__id')
-
-qs = Aluno.objects.filter(polo__id__in=ids)
-```
-
-Depois, `AlunoAdmin.get_queryset()` encadeia as demais operacoes:
+**Model:** `edu/models/cadastros_gerais.py:526-538`
 
 ```python
-qs = (
-    Aluno.locals
-    .exclude(turmaminicurso__gerar_matricula=False)
-    .select_related('ano_letivo', 'pessoa_fisica', 'situacao')
-)
+class HorarioCampus(LogModel):
+    descricao = models.CharFieldPlus('Descrição')
+    uo = models.ForeignKeyPlus(
+        'rh.UnidadeOrganizacional',
+        verbose_name='Campus',
+        on_delete=models.CASCADE,
+    )
+
+    objects = models.Manager()
+    locals = FiltroUnidadeOrganizacionalManager('uo')
 ```
 
-Em SQL conceitual, a parte de escopo corresponde a:
-
-```sql
-SELECT ...
-FROM edu_aluno
-WHERE edu_aluno.polo_id IN (
-    SELECT polo_id
-    FROM edu_coordenadorpolo
-    WHERE funcionario_id = <perfil-do-usuario>
-)
-AND NOT (<condicao do minicurso temporario>)
-```
-
-Para observar o SQL real durante uma requisicao, coloque temporariamente um
-breakpoint depois da construcao do queryset e execute:
+**Admin:** `edu/admin.py:374-385`
 
 ```python
-print(qs.query)
+class HorarioCampusAdmin(ModelAdminPlus):
+    # Configuracoes da listagem omitidas.
+
+    def get_queryset(self, request):
+        return super().get_queryset(request, HorarioCampus.locals)
 ```
 
-O SQL exato inclui aliases, `JOIN`s do `exclude()` e os relacionamentos de
-`select_related()`, por isso sera mais extenso que a representacao conceitual.
+`FiltroUnidadeOrganizacionalManager`, em `edu/managers.py:117-137`, identifica
+as unidades permitidas para o usuario e, quando existem IDs delimitadores,
+aplica dinamicamente:
 
 ```python
-.exclude(turmaminicurso__gerar_matricula=False)
+filtro = {f'{self.key}__id__in': ids}
+qs = qs.filter(**filtro)
 ```
 
-remove alunos temporarios de minicurso que nao devem aparecer nessa listagem.
+Como o manager foi criado com a chave `'uo'`, o filtro resultante equivale a:
+
+```python
+qs.filter(uo__id__in=ids)
+```
+
+Esse exemplo comprova por que nao se deve explicar `locals` apenas como
+"registros do campus": o nome e uma convencao; a regra concreta pertence ao
+manager associado ao model.
+
+#### 3.13.7. Desempenho com `select_related()`
+
+As colunas de `AlunoAdmin` acessam `ano_letivo`, `pessoa_fisica` e `situacao`.
+Sem antecipacao, a renderizacao pode provocar novas consultas para cada aluno
+da pagina, caracterizando o problema N+1.
 
 ```python
 .select_related('ano_letivo', 'pessoa_fisica', 'situacao')
 ```
 
-antecipa relacionamentos usados nas colunas. Sem isso, cada linha poderia
-executar consultas adicionais, produzindo o problema N+1.
+`select_related()` realiza joins para relacionamentos de valor unico, como
+`ForeignKey` e `OneToOneField`. Para relacoes multiplas, a ferramenta usual e
+`prefetch_related()`.
 
-### 4.5. Colunas calculadas
+Otimizar nao significa ampliar o escopo: `select_related()` muda a forma de
+carregamento dos relacionamentos, mas preserva os alunos definidos pelas
+etapas anteriores.
 
-`get_foto()`, em `edu/admin.py:1628-1631`, devolve a imagem do aluno:
+#### 3.13.8. Como demonstrar em aula
+
+1. Acesse `/admin/edu/aluno/` com um usuario autorizado.
+2. Abra `edu/admin.py:1625-1626` e identifique manager, exclusao e otimizacao.
+3. Abra `edu/models/alunos.py:250-256` e compare `objects` com `locals`.
+4. Abra `edu/managers.py:671-682` e acompanhe a regra do coordenador de polo.
+5. Explique que `list_filter` atua depois do escopo inicial e nao deve ser
+   usado como protecao de acesso.
+6. Compare com `HorarioCampusAdmin`, em `edu/admin.py:374-385`, para mostrar
+   que outro manager `locals` pode implementar outra regra.
+
+Checklist para revisar qualquer `get_queryset()`:
+
+- Qual e o queryset ou manager de origem?
+- A regra depende do usuario, grupo, setor, campus ou objeto?
+- O usuario sem correspondencia recebe tudo, nada ou um subconjunto?
+- A mesma restricao vale para acesso direto a um objeto?
+- Existem `select_related()` ou `prefetch_related()` adequados?
+- Busca, filtros e exportacao preservam esse queryset?
+- Ha teste com usuario autorizado, usuario restrito e superusuario?
+
+### 3.14. Permissoes no `ModelAdmin`
+
+#### 3.14.1. Conceito e finalidade
+
+As permissoes do `ModelAdmin` determinam quais operacoes administrativas o
+usuario pode executar. Elas sao verificadas tanto durante a montagem da
+interface quanto no atendimento direto das URLs.
+
+O Django trabalha, por padrao, com quatro operacoes de model:
+
+| Operacao | Codename para `Aluno` | Metodo do Admin |
+|---|---|---|
+| Visualizar | `edu.view_aluno` | `has_view_permission()` |
+| Incluir | `edu.add_aluno` | `has_add_permission()` |
+| Alterar | `edu.change_aluno` | `has_change_permission()` |
+| Excluir | `edu.delete_aluno` | `has_delete_permission()` |
+
+A string segue o formato:
+
+```text
+<app_label>.<codename>
+```
+
+Exemplo de verificacao direta:
 
 ```python
-def get_foto(self, obj):
-    return mark_safe(
-        f'<img class="img-inside-container" '
-        f'src="{obj.get_foto_75x100_url()}"/>'
+request.user.has_perm('edu.change_aluno')
+```
+
+Essas permissoes padrao sao criadas pelo Django para os models concretos
+durante o processo de migrations. No banco, a definicao fica em
+`auth_permission`, relacionada ao model por `django_content_type`; usuarios e
+grupos recebem associacoes com essas permissoes.
+
+O `permissions.yaml` nao cria o mecanismo do Django. No SUAP, ele declara
+principalmente quais permissoes devem ser associadas a cada grupo. Por exemplo,
+`edu/permissions.yaml:46-57` atribui ao grupo `Administrador Acadêmico`, entre
+outras, `view_aluno`, `change_aluno` e `delete_aluno`.
+
+O model tambem pode declarar permissoes adicionais em `class Meta`. O model
+`Aluno` faz isso a partir de `edu/models/alunos.py:482-490`, com permissoes de
+negocio como `emitir_diploma`, `emitir_boletim` e `emitir_historico`. Essas
+permissoes extras podem proteger operacoes especificas, mas nao substituem
+automaticamente os quatro metodos do Admin.
+
+#### 3.14.2. Implementacao nativa do Django
+
+Os metodos pertencem a `BaseModelAdmin`/`ModelAdmin`, no pacote instalado
+`django/contrib/admin/options.py:536-609` da versao 4.1.5.
+
+Forma reduzida da implementacao:
+
+```python
+def has_add_permission(self, request):
+    codename = get_permission_codename('add', self.opts)
+    return request.user.has_perm(f'{self.opts.app_label}.{codename}')
+
+def has_change_permission(self, request, obj=None):
+    codename = get_permission_codename('change', self.opts)
+    return request.user.has_perm(f'{self.opts.app_label}.{codename}')
+
+def has_delete_permission(self, request, obj=None):
+    codename = get_permission_codename('delete', self.opts)
+    return request.user.has_perm(f'{self.opts.app_label}.{codename}')
+
+def has_view_permission(self, request, obj=None):
+    view = get_permission_codename('view', self.opts)
+    change = get_permission_codename('change', self.opts)
+    return request.user.has_perm(
+        f'{self.opts.app_label}.{view}'
+    ) or request.user.has_perm(
+        f'{self.opts.app_label}.{change}'
     )
 
-get_foto.short_description = 'Foto'
+def has_module_permission(self, request):
+    return request.user.has_module_perms(self.opts.app_label)
 ```
 
-`get_info_principal()`, em `edu/admin.py:1843-1863`, monta uma coluna composta.
-O metodo consulta `self.request.user` para mostrar CPF apenas a grupos
-autorizados.
+Na implementacao padrao, `obj` e recebido pelos metodos de visualizar,
+alterar e excluir, mas nao e analisado. Ele existe para permitir que uma
+subclasse implemente regras por objeto.
 
-Esse exemplo une tres responsabilidades:
+`has_module_permission()` possui funcao diferente: controla a exibicao da
+aplicacao no indice do Admin e o acesso ao indice daquela aplicacao. Ele nao
+autoriza, sozinho, inclusao, alteracao ou exclusao. As operacoes continuam
+dependendo de seus metodos especificos.
 
-```text
-obj             -> dados da linha
-self.request    -> usuario e contexto da requisicao
-retorno HTML    -> apresentacao da coluna
-```
+#### 3.14.3. Quando `obj` e `None`
 
-Uma coluna nao deve executar consultas repetidas sem necessidade. Antes de
-acessar relacionamentos dentro dela, avalie `select_related()` ou
-`prefetch_related()` no queryset.
-
-### 4.6. URL personalizada no Admin
-
-`AlunoAdmin` adiciona `/admin/edu/aluno/correntes/` em
-`edu/admin.py:1651-1662`:
+O mesmo metodo e chamado em dois contextos:
 
 ```python
-def get_urls(self):
-    urls = super().get_urls()
-    my_urls = [
-        path('correntes/', self.admin_site.admin_view(self.correntes))
-    ]
-    return my_urls + urls
+has_change_permission(request, obj=None)
+has_change_permission(request, obj=aluno)
 ```
 
-`self.admin_site.admin_view()` envolve a view com as protecoes do Admin. Uma URL
-administrativa personalizada nao deve ser ligada diretamente sem essa camada.
-
-#### 4.6.1. O que `get_urls()` esta fazendo
-
-```python
-urls = super().get_urls()
-```
-
-recupera primeiro todas as rotas herdadas. No caso do `AlunoAdmin`, elas
-incluem:
-
-- a rota de visualizacao do `ModelAdminPlus`, como `<obj_pk>/view/`;
-- listagem, inclusao, edicao, exclusao e historico do Django.
-
-Depois:
-
-```python
-my_urls = [
-    path('correntes/', self.admin_site.admin_view(self.correntes))
-]
-```
-
-cria uma rota adicional cuja view e o metodo `AlunoAdmin.correntes()`. O
-prefixo `/admin/edu/aluno/` ja foi criado por `AdminSite`; por isso o caminho
-final e:
-
-```text
-/admin/edu/aluno/correntes/
-```
-
-#### 4.6.2. Por que `my_urls + urls`
-
-A ordem das rotas importa. O retorno atual e:
-
-```python
-return my_urls + urls
-```
-
-Assim, `correntes/` e testada antes das rotas dinamicas que recebem um
-identificador de objeto. Se fosse adicionada depois, uma rota generica poderia
-interpretar a palavra `correntes` como `object_id`. Como regra pratica, URLs
-especificas devem aparecer antes das rotas variaveis ou abrangentes.
-
-#### 4.6.3. O que `admin_view()` protege
-
-`AdminSite.admin_view()` envolve a callable antes de ela entrar no resolvedor.
-Essa camada aplica o acesso administrativo do site, redireciona usuarios nao
-autorizados para o login e acrescenta protecoes como `never_cache` e CSRF.
-
-Entretanto, `admin_view()` nao substitui automaticamente uma verificacao
-especifica do model dentro de toda view personalizada. Para uma view que
-exponha ou altere dados, o padrao seguro e verificar explicitamente a operacao:
-
-```python
-def minha_view(self, request):
-    if not self.has_view_permission(request):
-        raise PermissionDenied()
-    ...
-```
-
-No exemplo atual, `correntes()` apenas calcula filtros e redireciona para a
-listagem normal de alunos. A `changelist_view` de destino volta a aplicar as
-permissoes e o queryset do `AlunoAdmin`. Se a view passasse a devolver dados
-diretamente ou executar uma alteracao, ela precisaria de autorizacao propria.
-
-#### 4.6.4. Fluxo completo de `correntes()`
-
-O metodo esta em `edu/admin.py:1651-1657`:
-
-```text
-GET /admin/edu/aluno/correntes/
-  -> AdminSite seleciona AlunoAdmin
-  -> get_urls() encontra correntes/ antes das rotas com object_id
-  -> admin_view() verifica acesso ao site administrativo
-  -> correntes() identifica o campus do usuario
-  -> HttpResponseRedirect para /admin/edu/aluno/?<filtro>
-  -> changelist_view() verifica permissao e monta o queryset
-```
-
-Para um usuario de campus diferente da Reitoria, o destino inclui:
-
-```text
-?curso_campus__diretoria__setor__uo__id__exact=<id-da-uo>
-```
-
-Esse parametro inicia a listagem com o campus selecionado. Ele e um filtro de
-interface; o escopo de seguranca continua sendo responsabilidade das
-permissoes e de `get_queryset()`.
-
-<a id="etapa-5"></a>
-
-## Etapa 5 — Formulários, permissões e escopo
-
-### 5.1. Permissoes padrao do Django
-
-Para cada model, o Django cria normalmente quatro permissoes de model:
-
-```text
-edu.view_aluno
-edu.add_aluno
-edu.change_aluno
-edu.delete_aluno
-```
-
-Essas strings sao usadas pelo codigo Python, mas a permissao e armazenada no
-banco como um registro relacionado a um `ContentType`.
-
-#### 5.1.1. De onde surgem `add`, `change`, `delete` e `view`
-
-Cada model possui a opcao `_meta.default_permissions`. O Django 4.1 cria por
-padrao `add`, `change`, `delete` e `view`. O SUAP torna essa convencao explicita
-na metaclasse dos models.
-
-**Arquivo:** `djtools/db/models/__init__.py`  
-**Linhas:** `449-452`
-
-```python
-class SUAPMetaModel(MetaModelPlus):
-    def __new__(cls, name, *args, **kwargs):
-        my_meta = super().__new__(cls, name, *args, **kwargs)
-        my_meta._meta.default_permissions = (
-            'add', 'change', 'delete', 'view'
-        )
-        return my_meta
-```
-
-Ao executar migrations, o Django emite o sinal `post_migrate`. A aplicacao de
-autenticacao conecta esse sinal a `create_permissions()` em
-`django/contrib/auth/apps.py:18-22`.
-
-`create_permissions()`, implementada em
-`django/contrib/auth/management/__init__.py:37-106`, executa este fluxo:
-
-1. garante que o `ContentType` de cada model exista;
-2. le `_meta.default_permissions` e `_meta.permissions`;
-3. forma os codenames, como `view_aluno`;
-4. consulta as permissoes que ja existem;
-5. cria em lote apenas as ausentes.
-
-Trecho essencial da implementacao nativa:
-
-```python
-for klass in app_config.get_models():
-    content_type = ContentType.objects.get_for_model(
-        klass,
-        for_concrete_model=False,
-    )
-    for codename, name in _get_all_permissions(klass._meta):
-        searched_perms.append((content_type, (codename, name)))
-
-Permission.objects.bulk_create(perms)
-```
-
-`_get_all_permissions()` combina as quatro permissoes padrao com permissoes
-adicionais declaradas em `class Meta`. O model `Aluno`, por exemplo, declara
-permissoes de negocio em `edu/models/alunos.py:482-495`, como
-`emitir_diploma`, `emitir_boletim` e `gerar_relatorio`.
-
-Portanto:
-
-```text
-default_permissions -> permissoes CRUD criadas para todos os models
-Meta.permissions     -> permissoes adicionais daquele model
-```
-
-#### 5.1.2. Onde as permissoes ficam no banco
-
-As tabelas principais sao:
-
-| Tabela | Informacao armazenada |
+| Valor | Pergunta aproximada |
 |---|---|
-| `django_content_type` | Aplicacao e model: `app_label='edu'`, `model='aluno'` |
-| `auth_permission` | Nome, codename e FK para `django_content_type` |
-| `auth_group` | Grupos de usuarios |
-| `auth_group_permissions` | Relacao entre grupo e permissao |
-| `auth_user` | Usuarios do SUAP |
-| `auth_user_groups` | Relacao entre usuario e grupo |
-| `auth_user_user_permissions` | Permissoes atribuidas diretamente ao usuario |
+| `obj=None` | O usuario pode alterar algum objeto deste model? |
+| `obj=<instancia>` | O usuario pode alterar especificamente este objeto? |
 
-`ContentType` e implementado em
-`django/contrib/contenttypes/models.py:137-146`. Sua tabela e explicitamente
-definida como `django_content_type` e o par `app_label/model` e unico.
+Essa diferenca e importante para montar botoes gerais, abrir listagens e
+validar uma tela de edicao. Uma sobrescrita deve tratar `obj=None` sem tentar
+acessar atributos da instancia.
 
-`Permission` esta em `django/contrib/auth/models.py:38-84`:
+#### 3.14.4. O que o `ModelAdminPlus` modifica
 
-```python
-class Permission(models.Model):
-    name = models.CharField(max_length=255)
-    content_type = models.ForeignKey(ContentType, models.CASCADE)
-    codename = models.CharField(max_length=100)
-
-    class Meta:
-        unique_together = [['content_type', 'codename']]
-```
-
-Para `edu.view_aluno`, o banco representa a identidade desta forma:
-
-```text
-django_content_type
-    id: <id do ContentType>
-    app_label: edu
-    model: aluno
-
-auth_permission
-    id: <id da permissao>
-    content_type_id: <id do ContentType>
-    codename: view_aluno
-    name: Can view Aluno
-```
-
-O numero dos IDs depende do banco. O texto completo `edu.view_aluno` nao
-precisa estar em uma unica coluna: ele e reconstruido com
-`content_type.app_label + '.' + permission.codename`.
-
-Consulta equivalente no shell:
-
-```python
-from django.contrib.auth.models import Permission
-
-permissao = Permission.objects.get(
-    content_type__app_label='edu',
-    content_type__model='aluno',
-    codename='view_aluno',
-)
-```
-
-O SUAP usa `AUTH_USER_MODEL = 'comum.User'` em
-`suap/settings_base.py:565`. Esse model herda de `AbstractUser` e preserva a
-tabela `auth_user`, conforme `comum/models.py:207-240`.
-
-#### 5.1.3. Relacao com `permissions.yaml`
-
-O `permissions.yaml` nao substitui a criacao das permissoes pelo Django. Sua
-principal funcao e declarar **quais permissoes devem ser associadas a quais
-grupos** no SUAP.
-
-Exemplo real:
-
-**Arquivo:** `edu/permissions.yaml`  
-**Linhas:** `2101-2107`
-
-```yaml
-Organizador de Minicurso:
-  description: Usuários deste grupo gerenciam os minicursos.
-  edu:
-    aluno:
-    - view_aluno
-    - view_dados_academicos
-    - view_dados_pessoais
-```
-
-Leitura da hierarquia:
-
-```text
-grupo: Organizador de Minicurso
-app: edu
-model vinculado ao ContentType: aluno
-codename: view_aluno
-```
-
-O comando `sync_permissions` le os arquivos em
-`djtools/management/commands/sync_permissions.py:69-80` e
-`djtools/management/commands/sync_permissions.py:134-146`. O parser YAML esta
-em `djtools/management/permission.py:93-126`.
-
-```bash
-python manage.py sync_permissions
-```
-
-Internamente, o parser monta a identificacao em tres partes:
-
-```text
-edu.aluno.view_aluno
-```
-
-Esse formato auxilia a localizar o registro no banco. A verificacao Django
-utilizada pela aplicacao continua sendo:
-
-```text
-edu.view_aluno
-```
-
-`sync_groups_and_permissions()`, em
-`djtools/utils/__init__.py:1650-1729`, separa as tres partes e procura:
-
-```python
-Permission.objects.get(
-    content_type__app_label='edu',
-    content_type__model='aluno',
-    codename='view_aluno',
-)
-```
-
-Depois cria ou recupera o grupo e executa, conceitualmente:
-
-```python
-grupo.permissions.add(permissao)
-```
-
-Essa relacao e gravada em `auth_group_permissions`. Os usuarios vinculados ao
-grupo, por `auth_user_groups`, passam a receber a permissao indiretamente.
-
-Antes de reconstruir as associacoes, o comando limpa as permissoes dos grupos
-processados em `sync_permissions.py:119-122` e
-`sync_permissions.py:178-186`. Por isso, o YAML deve ser tratado como fonte de
-sincronizacao, e nao apenas como uma lista de permissoes incrementais.
-
-Fluxo completo:
-
-```text
-model e suas opcoes Meta
-    -> migrate/post_migrate
-    -> django_content_type + auth_permission
-
-permissions.yaml
-    -> sync_permissions
-    -> auth_group + auth_group_permissions
-
-usuario pertence ao grupo
-    -> auth_user_groups
-    -> user.has_perm('edu.view_aluno') == True
-```
-
-O comando tambem consegue recriar uma permissao CRUD padrao ausente, conforme
-`djtools/utils/__init__.py:1691-1703`. Permissoes personalizadas, entretanto,
-devem existir nos metadados do model; caso contrario, a sincronizacao informa
-que a permissao nao existe.
-
-#### 5.1.4. Como `user.has_perm()` encontra a permissao
-
-O `User` do SUAP sobrescreve `has_perm()` em `comum/models.py:234-240`, mas no
-fluxo comum delega ao Django com `super().has_perm()`.
-
-O backend padrao combina:
-
-- permissoes diretas de `auth_user_user_permissions`;
-- permissoes dos grupos, por `auth_user_groups` e
-  `auth_group_permissions`;
-- acesso total para superusuarios ativos.
-
-A implementacao pode ser vista em
-`django/contrib/auth/backends.py:63-114`. O resultado e convertido em strings
-`<app_label>.<codename>`, como `edu.view_aluno`, e armazenado em cache no
-objeto do usuario durante aquela execucao.
-
-#### 5.1.5. Como o Admin consulta as permissoes
-
-No `ModelAdmin` nativo, os metodos de permissao montam o codename a partir dos
-metadados do model e chamam `request.user.has_perm()`.
-
-**Implementacao do Django:**
-`django/contrib/admin/options.py:536-609`
-
-Exemplo equivalente ao codigo de `has_change_permission()`:
-
-```python
-opts = self.opts
-codename = get_permission_codename('change', opts)
-return request.user.has_perm(
-    f'{opts.app_label}.{codename}'
-)
-```
-
-Para `Aluno`, o resultado e `edu.change_aluno`.
-
-Na verificacao de visualizacao, o Django aceita `view_aluno` **ou**
-`change_aluno`: quem pode alterar tambem pode abrir o registro. Essa regra esta
-em `django/contrib/admin/options.py:575-591` e foi preservada pelo helper do
-DJTools em `djtools/utils/__init__.py:1928-1949`.
-
-O `ModelAdminPlus` adapta esse fluxo em
-`djtools/contrib/admin/options/__init__.py:295-308`:
+O `ModelAdminPlus` herda `has_add_permission()` e
+`has_module_permission()` do Django, mas redefine visualizacao, alteracao e
+exclusao em `djtools/contrib/admin/options/__init__.py:295-308`:
 
 ```python
 def has_view_permission(self, request, obj=None):
@@ -3959,661 +1127,1281 @@ def has_change_permission(self, request, obj=None):
     if obj and hasattr(obj, 'can_change'):
         if not obj.can_change(request.user):
             return False
-    return utils.has_change_permission(
+
+    perm = utils.has_change_permission(
         model=self.model,
+        user=request.user,
+    )
+
+    if not perm and obj is None:
+        perm = self.has_view_permission(request, obj)
+    return perm
+
+def has_delete_permission(self, request, obj=None):
+    return utils.has_delete_permission(
+        model=self.model,
+        obj=obj,
         user=request.user,
     )
 ```
 
-Os helpers do DJTools estao em `djtools/utils/__init__.py:1859-2003`. Alem da
-permissao global, eles podem consultar `can_view()`, `can_change()` e
-`can_delete()` do objeto.
+Principais diferencas:
 
-Assim, a decisao pode possuir duas camadas:
+- a verificacao e delegada aos helpers de `djtools.utils`;
+- os helpers do DJTools suportam regras como `can_view(user)`,
+  `can_change(user)` e `can_delete(user)` quando recebem a instancia;
+- no caminho atual do `ModelAdminPlus`, `can_change()` e consultado
+  explicitamente e o objeto e encaminhado para a verificacao de exclusao;
+- `has_view_permission()` nao encaminha `obj` ao helper na implementacao atual,
+  portanto `can_view()` nao e aplicado por esse caminho;
+- sem `change`, uma chamada geral de alteracao com `obj=None` pode aceitar
+  `view`, permitindo o fluxo administrativo em modo de consulta;
+- a verificacao de uma instancia continua exigindo a autorizacao propria da
+  operacao.
 
-```text
-user.has_perm('edu.change_aluno')  -> permissao global do model
-obj.can_change(user)               -> regra contextual daquele objeto
-```
+#### 3.14.5. Helpers de permissao do DJTools
 
-O Admin usa o resultado para permitir ou negar URLs, exibir botoes e autorizar
-o salvamento. Fluxos adicionais do SUAP tambem podem fornecer `readonly` ao
-template para uma apresentacao sem edicao. Ocultar um botao no template nao
-substitui essas verificacoes de backend.
-
-### 5.2. Metodos de permissao
-
-Metodos principais:
+As strings de permissao sao produzidas em
+`djtools/utils/__init__.py:1859-1908`:
 
 ```python
-has_view_permission(self, request, obj=None)
-has_add_permission(self, request)
-has_change_permission(self, request, obj=None)
-has_delete_permission(self, request, obj=None)
+def get_change_permission_for_model(model):
+    return (
+        model._meta.app_label
+        + '.'
+        + get_permission_codename('change', model._meta)
+    )
 ```
 
-O parametro `obj` permite uma decisao contextual sobre um registro especifico.
+Para `Aluno`, o resultado e `edu.change_aluno`.
 
-O `ModelAdminPlus` implementa verificacoes adicionais em
-`djtools/contrib/admin/options/__init__.py:295-308`. Em especial,
-`has_change_permission()` chama `obj.can_change(request.user)` quando o objeto
-possui esse metodo.
+As verificacoes estao em `djtools/utils/__init__.py:1911-2003`:
 
-Exemplo de regra local em `AlunoAdmin`, `edu/admin.py:1617-1623`:
+```python
+def has_change_permission(model, obj=None, user=None):
+    user = user or get_tl().get_user()
+    if not user:
+        return False
+
+    if not user.has_perm(
+        get_change_permission_for_model(model)
+    ):
+        return False
+
+    if hasattr(obj, 'can_change'):
+        return obj.can_change(user=user)
+    return True
+```
+
+O padrao e uma verificacao em camadas:
+
+```text
+permissao global do model
+          +
+regra opcional da instancia (can_change/can_delete/can_view)
+          =
+resultado da operacao
+```
+
+`has_view_permission()`, em `djtools/utils/__init__.py:1928-1949`, aceita
+`view` ou `change` e pode consultar `obj.can_view(user=user)` quando recebe uma
+instancia. Como visto acima, o `ModelAdminPlus` atual chama esse helper sem
+repassar `obj`; esse comportamento deve ser considerado ao criar uma regra de
+visualizacao por objeto.
+`has_delete_permission()`, nas linhas `1977-2003`, exige `delete` e pode
+consultar `obj.can_delete(user=user)`.
+
+#### 3.14.6. Exemplo 1: regra de alteracao de aluno
+
+**Arquivo:** `edu/admin.py`  
+**Linhas:** `1617-1623`
 
 ```python
 def has_change_permission(self, request, obj=None):
     if (
         request.user.has_perm('edu.change_aluno')
         or request.user.groups.filter(
-            name='Auxiliar de Secretaria Academica'
+            name='Auxiliar de Secretaria Acadêmica'
         ).exists()
     ):
         return True
+
     return super().has_change_permission(request, obj)
 ```
 
-Uma verificacao no template ou a ausencia de um botao nao protege a URL. A
-autorizacao deve ser validada no backend por esses metodos, pela view ou pela
-regra contextual correspondente.
+O codigo real utiliza acento no nome do grupo. A regra permite alteracao
+quando:
 
-### 5.3. Permissao nao substitui escopo
+- o usuario possui diretamente ou por grupo `edu.change_aluno`; ou
+- pertence ao grupo `Auxiliar de Secretaria Acadêmica`; ou
+- a implementacao herdada do `ModelAdminPlus` autoriza o contexto restante.
 
-Permissao e escopo respondem a perguntas diferentes. As duas verificacoes sao
-necessarias:
-
-```text
-O usuario pode abrir o cadastro de Turma?       -> has_view_permission()
-Quais turmas ele pode consultar?                -> get_queryset()/manager
-Ele pode alterar esta turma e estes campos?     -> regra do objeto/form
-```
-
-#### 5.3.1. Primeira barreira: `has_view_permission()`
-
-O `TurmaAdmin` herda de `ModelAdminPlus`. A implementacao herdada esta em
-`djtools/contrib/admin/options/__init__.py:295-296`:
-
-```python
-def has_view_permission(self, request, obj=None):
-    return utils.has_view_permission(model=self.model, user=request.user)
-```
-
-O helper chamado por esse metodo esta em `djtools/utils/__init__.py:1928-1949`.
-Ele autoriza a visualizacao quando o usuario possui a permissao `view` ou
-`change` do model. O helper tambem suporta receber um objeto e, nesse caso,
-chamar `obj.can_view(user)`. Observe, porem, que a implementacao de
-`ModelAdminPlus.has_view_permission()` reproduzida acima passa somente
-`model` e `user`; uma regra por objeto precisa ser encaminhada pelo ponto do
-fluxo que efetivamente forneca `obj`.
-
-Em termos simplificados:
-
-```python
-request.user.has_perm('edu.view_turma')
-# ou
-request.user.has_perm('edu.change_turma')
-```
-
-Essa verificacao responde **se o usuario pode acessar o recurso Turma**. Ela
-nao define, sozinha, quais linhas da tabela `edu_turma` poderao ser vistas.
-
-#### 5.3.2. Segunda barreira: `get_queryset()`
-
-O escopo da listagem e definido pelo queryset devolvido pelo Admin. O exemplo
-real esta em `edu/admin.py:972-977`:
-
-```python
-def get_queryset(self, request):
-    if request.user.has_group_cached('Diretor Acadêmico'):
-        manager = Turma.objects
-    else:
-        manager = Turma.locals
-    return (
-        super().get_queryset(request, manager)
-        .select_related('curso_campus__diretoria__setor__uo')
-    )
-```
-
-O metodo escolhe o manager antes de construir a consulta:
-
-| Situacao | Permissao | Manager escolhido | Resultado |
-|---|---|---|---|
-| Sem `view_turma` e sem `change_turma` | negada | nao importa | o Admin deve negar o acesso |
-| Com permissao e no grupo `Diretor Acadêmico` | concedida | `Turma.objects` | consulta geral de turmas |
-| Com permissao e fora desse grupo | concedida | `Turma.locals` | consulta limitada pelo contexto local |
-
-`Turma.objects` e `Turma.locals` sao declarados em
-`edu/models/turmas.py:23-24`. O primeiro usa `TurmaManager`, enquanto o segundo
-usa `TurmaLocalManager`. A implementacao de `TurmaLocalManager` comeca em
-`edu/managers.py:416`; ela combina os filtros de diretoria com regras locais,
-como as aplicadas a coordenadores de polo.
-
-#### 5.3.3. O que muda nas URLs do Admin
-
-O queryset nao protege apenas a tabela exibida em
-`/admin/edu/turma/`. O Django Admin tambem procura o objeto da tela de edicao a
-partir do queryset do proprio `ModelAdmin`. Por isso, uma turma fora do escopo
-nao deve se tornar acessivel apenas porque alguem digitou diretamente uma URL
-como:
+Esse metodo responde **se a operacao e permitida**. O conjunto de alunos que
+aparece continua sendo definido por `AlunoAdmin.get_queryset()`, em
+`edu/admin.py:1625-1626`. Portanto:
 
 ```text
-/admin/edu/turma/123/change/
+has_change_permission() -> pode alterar?
+get_queryset()           -> quais alunos consegue localizar?
 ```
 
-O fluxo esperado e:
+Ao criar uma excecao por grupo, deve-se avaliar se ela tambem precisa respeitar
+uma regra por objeto. Um retorno antecipado `True` encerra a verificacao e nao
+executa o metodo herdado.
 
-```text
-requisicao
-   -> has_view_permission()/has_change_permission()
-   -> TurmaAdmin.get_queryset(request)
-   -> procura do objeto dentro do queryset permitido
-   -> exibicao ou negacao
-```
+#### 3.14.7. Exemplo 2: impedir inclusao pelo Admin
 
-Trocar `Turma.locals` por `Turma.objects` nao concede a permissao Django, mas
-amplia o conjunto de registros encontrado pela listagem, busca, exportacao e
-acesso por identificador. Portanto, esta troca tambem e uma alteracao de
-seguranca.
-
-> **Regra pratica:** `has_view_permission()` controla a porta de entrada;
-> `get_queryset()` controla quais registros existem depois dessa porta. Uma
-> camada nao substitui a outra.
-
-### 5.4. `objects` x `locals` no Admin
+`ProfessorAdmin` desabilita a inclusao administrativa em
+`edu/admin.py:1504-1505`:
 
 ```python
-Aluno.objects  # manager geral
-Aluno.locals   # manager com restricao contextual/local do SUAP
+def has_add_permission(self, request):
+    return False
 ```
 
-Antes de trocar `locals` por `objects`, analise o impacto de seguranca. Uma
-mudanca aparentemente pequena pode ampliar a listagem, busca, exportacao e
-autocomplete para dados de outros campi.
+Mesmo que o usuario possua a permissao `edu.add_professor`, esse Admin nao
+oferece nem aceita o fluxo padrao de inclusao. O cadastro utiliza uma acao
+propria adicionada na barra em `edu/admin.py:1507-1510`.
 
-Exemplo contextual em `TurmaAdmin`, `edu/admin.py:972-977`:
+Esse exemplo mostra que a permissao do banco e uma entrada para a decisao, mas
+uma sobrescrita do `ModelAdmin` pode impor uma restricao adicional.
 
-```python
-def get_queryset(self, request):
-    if request.user.has_group_cached('Diretor Acadêmico'):
-        manager = Turma.objects
-    else:
-        manager = Turma.locals
-    return (
-        super().get_queryset(request, manager)
-        .select_related('curso_campus__diretoria__setor__uo')
-    )
-```
+#### 3.14.8. Exemplo 3: exclusao condicionada ao objeto e ao curso
 
-### 5.5. Form do Admin e seguranca dos campos
-
-Ocultar um campo com CSS ou colocar apenas o atributo HTML `readonly` altera a
-interface, mas nao constitui uma autorizacao de backend. Um usuario pode montar
-manualmente outra requisicao `POST`. A protecao deve determinar quais campos
-fazem parte do form processado pelo servidor e validar as regras antes do
-salvamento.
-
-#### 5.5.1. Exemplo real de `get_readonly_fields()`
-
-O `ProcessoAdmin`, em `processo_eletronico/admin.py:241-247`, muda os campos
-somente leitura de acordo com o estado do objeto:
+`DiarioAdmin`, em `edu/admin.py:1464-1467`, combina estado do objeto com uma
+regra contextual do EDU:
 
 ```python
-def get_readonly_fields(self, request, obj=None):
-    readonly_fields = []
-    if obj and obj.tem_tramite():
-        readonly_fields += [
-            'assunto',
-            'interessados',
-            'tipo_processo',
-            'setor_criacao',
-        ]
-    if obj and obj.pk:
-        readonly_fields += ['nivel_acesso', 'hipotese_legal']
-    return readonly_fields
-```
-
-Leitura do metodo:
-
-- `obj is None`: e uma inclusao; ainda nao existe processo salvo;
-- `obj and obj.pk`: e uma edicao; nivel de acesso e hipotese legal deixam de
-  ser editaveis;
-- `obj.tem_tramite()`: o processo ja possui tramitacao; dados estruturais
-  adicionais tambem ficam protegidos;
-- a lista devolvida pode variar para cada objeto e requisicao.
-
-O Django usa `readonly_fields` tanto para apresentar os valores como leitura
-quanto para exclui-los do `ModelForm` editavel. Assim, eles nao entram em
-`cleaned_data` e nao sao atualizados pelo `form.save()`.
-
-#### 5.5.2. Remocao dinamica de campos
-
-O mesmo `ProcessoAdmin` altera os `fieldsets` em
-`processo_eletronico/admin.py:249-265`. Ao editar um processo salvo que ainda
-nao possui tramite, o formulario passa a mostrar somente tres campos:
-
-```python
-def get_fieldsets(self, request, obj=None):
-    # fieldset completo omitido aqui
-    if obj and obj.pk and not obj.tem_tramite():
-        self.fieldsets = (
-            ('Dados do Processo', {
-                'fields': ('tipo_processo', 'setor_criacao', 'classificacao')
-            }),
+def has_delete_permission(self, request, obj=None):
+    if (
+        obj
+        and obj.pode_ser_excluido()
+        and perms.realizar_procedimentos_academicos(
+            request.user,
+            obj.turma.curso_campus,
         )
-    return self.fieldsets
+    ):
+        return True
+    return False
 ```
 
-Neste caso, `get_fieldsets()` determina quais campos participam da tela e da
-classe de formulario montada pelo Admin. A decisao usa o proprio objeto, mas
-poderia tambem consultar `request.user` para variar conforme a permissao ou o
-grupo do usuario.
+A exclusao so e permitida quando:
 
-O SUAP possui ainda o padrao de remover campos diretamente no construtor do
-form. Um exemplo didatico esta em `edu/forms.py:4585-4599`: o
-`AtualizarDadosPessoaisForm` remove os telefones quando
-`pode_realizar_procedimentos` e falso. Esse form e usado por uma view
-personalizada, nao pelo Admin, mas o efeito no processamento e o mesmo:
+1. existe uma instancia;
+2. o diario esta em estado que admite exclusao;
+3. o usuario pode realizar procedimentos academicos naquele curso.
 
-```python
-if not self.pode_realizar_procedimentos:
-    del self.fields['telefone_principal']
-    del self.fields['telefone_secundario']
-else:
-    del self.fields['esconde_telefone']
-```
+Nao basta possuir genericamente `edu.delete_diario`. A regra considera o
+objeto e seu contexto academico.
 
-Remover `self.fields['campo']` e diferente de apenas esconder o elemento com
-JavaScript: o campo deixa de participar da validacao e de `cleaned_data`.
+Outro exemplo simples aparece em `RegistroEmissaoDiplomaAdmin`,
+`edu/admin.py:2360-2363`: uma emissao so pode ser excluida quando ainda nao
+possui `numero_formulario`.
 
-#### 5.5.3. O que acontece em um `POST` direto
+#### 3.14.9. Efeito na interface e protecao da URL
 
-Considere uma requisicao adulterada que inclua um campo protegido:
+As permissoes influenciam elementos como:
+
+- aparicao do model no indice;
+- botao de adicionar;
+- links e icones de visualizar ou editar;
+- botao e confirmacao de exclusao;
+- actions disponiveis;
+- aceite ou rejeicao de uma URL acessada diretamente.
+
+No `ModelAdminPlus`, `get_list_display()`, em
+`djtools/contrib/admin/options/__init__.py:208-220`, inclui a coluna de icones
+somente quando o usuario possui `view` ou `change`. Ja
+`show_list_display_icons()`, nas linhas `163-185`, escolhe entre o icone de
+visualizacao e o de edicao consultando os metodos de permissao.
+
+Esconder um botao ou link e apenas uma consequencia visual. A seguranca deve
+estar na view/metodo administrativo, pois o usuario pode digitar diretamente:
 
 ```text
-POST /admin/processo_eletronico/processo/123/change/
-assunto=Valor alterado manualmente
-nivel_acesso=PUBLICO
+/admin/edu/aluno/95812/change/
 ```
 
-O resultado depende de como o campo foi protegido:
+O Django volta a verificar a permissao durante o processamento dessa rota.
 
-| Implementacao | O campo integra o form no servidor? | Efeito do `POST` manual |
-|---|---:|---|
-| `get_readonly_fields()` | nao, como campo editavel | valor enviado nao deve ser salvo pelo `ModelForm` |
-| campo fora de `get_fieldsets()`/`fields` | nao | chave adicional nao integra `cleaned_data` |
-| `del self.fields['campo']` | nao | chave adicional nao integra `cleaned_data` |
-| somente CSS, JavaScript ou atributo no widget | sim | valor pode ser aceito; nao e protecao suficiente |
+#### 3.14.10. Cuidados ao sobrescrever
 
-No `AlunoAdmin`, por exemplo, o form efetivamente usado e declarado em
-`edu/admin.py:1612-1613`, e o `AlunoForm` esta em `edu/forms.py:215-314`.
-Qualquer customizacao de seguranca precisa considerar essa classe real, seu
-`clean()`, seu `save()` e as regras do model, e nao apenas o HTML gerado.
+Uma implementacao segura deve considerar:
 
-Para estudar o comportamento sem alterar dados importantes:
+- `obj` pode ser `None`;
+- grupos nao substituem automaticamente permissoes nem escopo;
+- retornar `True` antes de `super()` pode ignorar regras da classe-base;
+- ocultar a interface nao impede acesso direto;
+- `get_queryset()` deve limitar os objetos, quando houver escopo;
+- regras contextuais devem considerar curso, campus, diretoria ou estado do
+  objeto conforme o caso;
+- superusuarios, usuarios autorizados e usuarios restritos devem ser testados.
 
-1. Abra a tela de edicao e identifique um campo somente leitura.
-2. Inspecione o HTML e observe que ele nao e um campo editavel normal.
-3. Explique que uma requisicao pode ser forjada mesmo sem o controle visual.
-4. Mostre no debugger que o campo protegido nao aparece em
-   `form.cleaned_data`.
-5. Confirme no banco que o valor anterior foi preservado.
-
-> **Cuidado:** um campo ausente do form fica protegido contra a atualizacao
-> automatica daquele `ModelForm`, mas regras criticas ainda devem ser
-> verificadas no form, model ou servico de dominio, principalmente quando o
-> mesmo model pode ser alterado fora do Admin.
-
-<a id="etapa-6"></a>
-
-## Etapa 6 — Actions, inlines e hooks
-
-### 6.1. Actions administrativas
-
-Actions executam uma operacao sobre os registros selecionados na listagem. A
-assinatura basica recebe a requisicao e um queryset ja limitado aos objetos
-marcados pelo usuario:
+Evite autorizar apenas pela existencia de um parametro enviado pelo navegador:
 
 ```python
-def minha_action(self, request, queryset):
+# Incorreto: o usuario controla o valor recebido.
+if request.GET.get('pode_excluir') == '1':
+    return True
+```
+
+Prefira consultar dados confiaveis do usuario e do objeto:
+
+```python
+def has_delete_permission(self, request, obj=None):
+    if obj is None:
+        return False
+    return (
+        request.user.has_perm('edu.delete_exemplo')
+        and obj.pode_ser_excluido()
+    )
+```
+
+#### 3.14.11. Como demonstrar em aula
+
+1. Abra `edu/permissions.yaml:46-57` e identifique as permissoes de `Aluno`.
+2. Abra `edu/admin.py:1617-1626` e compare permissao com queryset.
+3. Mostre `ModelAdminPlus` em
+   `djtools/contrib/admin/options/__init__.py:295-308`.
+4. Mostre os helpers em `djtools/utils/__init__.py:1859-2003`.
+5. Compare dois usuarios na tela `/admin/edu/aluno/`.
+6. Tente abrir uma URL de edicao com usuario sem autorizacao.
+7. Abra `ProfessorAdmin`, em `edu/admin.py:1504-1510`, e mostre por que o botao
+   padrao de adicionar nao aparece.
+8. Abra `DiarioAdmin`, em `edu/admin.py:1464-1467`, e destaque a autorizacao
+   dependente do objeto.
+
+Checklist para revisar permissoes de um Admin:
+
+- Quais permissoes padrao o usuario ou grupo possui?
+- Existe permissao adicional em `Model.Meta.permissions`?
+- Algum metodo `has_*_permission()` foi sobrescrito?
+- A regra precisa analisar `obj=None` e uma instancia concreta?
+- O model implementa `can_view`, `can_change` ou `can_delete`?
+- O `get_queryset()` aplica o escopo correspondente?
+- O acesso direto a add, change e delete foi testado?
+- A regra apenas oculta o botao ou realmente bloqueia a operacao?
+
+### 3.15. Ciclo da listagem: `changelist_view()` e `ChangeListPlus`
+
+#### 3.15.1. Quatro conceitos diferentes
+
+No Admin, a palavra *changelist* significa a tela que lista os objetos de um
+model. Quatro elementos participam desse fluxo:
+
+| Elemento | Origem | Responsabilidade |
+|---|---|---|
+| Changelist | Conceito/tela | Listagem administrativa acessada no navegador |
+| `changelist_view()` | `ModelAdmin` | Recebe a requisicao e coordena permissao, actions, contexto e resposta |
+| `ChangeList` | Django | Interpreta configuracoes e mantem o estado da listagem |
+| `ChangeListPlus` | DJTools/SUAP | Especializa busca, filtros relacionados e ordenacao |
+
+Para alunos, a changelist e:
+
+```text
+/admin/edu/aluno/
+```
+
+Ela nao e atendida por uma funcao em `edu/views.py`. A URL gerada pelo
+`ModelAdmin.get_urls()` aponta para o metodo
+`AlunoAdmin.changelist_view()`. Como `AlunoAdmin` herda de `ModelAdminPlus`, a
+implementacao passa primeiro pelo DJTools e depois pelo Django.
+
+```text
+AlunoAdmin
+    -> ModelAdminPlus.changelist_view()
+        -> ModelAdmin.changelist_view()
+            -> ChangeListPlus
+```
+
+#### 3.15.2. Fluxo completo da requisicao
+
+```text
+GET /admin/edu/aluno/?q=paloma&tab=tab_suap
+  |
+  v
+AdminSite.admin_view()
+  -> valida acesso administrativo
+  |
+  v
+ModelAdminPlus.changelist_view()
+  -> guarda request, trata exportacao e prepara contexto do SUAP
+  |
+  v
+ModelAdmin.changelist_view()
+  -> verifica view/change e cria a instancia da changelist
+  |
+  v
+ModelAdmin.get_changelist_instance()
+  -> reune list_display, filtros, busca, ordem e paginacao
+  |
+  v
+ModelAdminPlus.get_changelist()
+  -> devolve a classe ChangeListPlus
+  |
+  v
+ChangeListPlus(...)
+  -> parte de AlunoAdmin.get_queryset()
+  -> aplica tab, filtros, pesquisa e ordenacao
+  -> conta e pagina os resultados
+  |
+  v
+contexto com cl
+  -> template change_list.html
+  -> tabela HTML
+```
+
+O nome `cl`, usado pelo Django e pelos templates, e uma abreviacao de
+`ChangeList`. Ele representa a listagem daquela requisicao, nao uma classe de
+model nem um registro do banco.
+
+#### 3.15.3. Entrada nativa: `ModelAdmin.changelist_view()`
+
+A implementacao nativa esta em
+`django/contrib/admin/options.py:1919-2097`, na versao 4.1.5. O metodo executa,
+em linhas gerais:
+
+1. verifica `has_view_or_change_permission()`;
+2. cria `cl` por meio de `get_changelist_instance()`;
+3. trata `POST` de actions administrativas;
+4. trata edicao em massa quando existe `list_editable`;
+5. monta formulario de actions e arquivos de midia;
+6. cria o contexto do template;
+7. retorna `TemplateResponse` com o template de changelist.
+
+Trecho reduzido para estudo:
+
+```python
+def changelist_view(self, request, extra_context=None):
+    if not self.has_view_or_change_permission(request):
+        raise PermissionDenied
+
+    cl = self.get_changelist_instance(request)
+
+    # O codigo real tambem processa actions e list_editable.
+    context = {
+        **self.admin_site.each_context(request),
+        'cl': cl,
+        'media': media,
+        'has_add_permission': self.has_add_permission(request),
+        'action_form': action_form,
+        **(extra_context or {}),
+    }
+
+    return TemplateResponse(
+        request,
+        self.change_list_template or 'admin/change_list.html',
+        context,
+    )
+```
+
+O ponto mais importante e `cl`: o template nao recebe apenas uma lista de
+objetos. Ele recebe um objeto que conhece resultados, filtros, pagina atual,
+colunas, contagens, actions e configuracoes do Admin.
+
+#### 3.15.4. Como nasce a instancia de `ChangeListPlus`
+
+O Django implementa `get_changelist_instance()` em
+`django/contrib/admin/options.py:822-849`. O metodo reune:
+
+```text
+model
+list_display e list_display_links
+list_filter e date_hierarchy
+search_fields e list_select_related
+list_per_page e list_max_show_all
+list_editable
+ModelAdmin
+sortable_by e search_help_text
+```
+
+Antes de instanciar, o Django pergunta qual classe deve usar:
+
+```python
+ChangeList = self.get_changelist(request)
+return ChangeList(request, self.model, ...)
+```
+
+No Django puro, `get_changelist()` devolve `ChangeList`, conforme
+`django/contrib/admin/options.py:814-820`. O `ModelAdminPlus` troca essa classe
+em `djtools/contrib/admin/options/__init__.py:200-206`:
+
+```python
+def get_changelist(self, request, **kwargs):
+    self.request = request
+    return ChangeListPlus
+```
+
+Consequentemente:
+
+```text
+TurnoAdmin/AlunoAdmin -> ModelAdminPlus -> ChangeListPlus
+admin.ModelAdmin puro                    -> ChangeList
+```
+
+Guardar `self.request` tambem permite que metodos de coluna e recursos do
+`ModelAdminPlus` consultem o usuario e os parametros atuais.
+
+#### 3.15.5. O que o `ChangeList` faz com o queryset
+
+`ChangeList` esta em `django/contrib/admin/views/main.py`. Seu construtor
+comeca nas linhas `57-139`; `get_results()` esta nas linhas `274-310`; e
+`get_queryset()` comeca na linha `495` da versao 4.1.5.
+
+O processamento conceitual e:
+
+```text
+ModelAdmin.get_queryset(request)
+    -> root_queryset
+    -> get_filters(request)
+    -> filtros restantes da query string
+    -> ModelAdmin.get_search_results()
+    -> select_related(), quando necessario
+    -> distinct(), quando joins podem duplicar linhas
+    -> get_ordering()
+    -> get_results(): count + Paginator
+    -> result_list da pagina atual
+```
+
+Alguns estados importantes do objeto `cl`:
+
+| Atributo | Conteudo |
+|---|---|
+| `root_queryset` | Consulta inicial devolvida pelo Admin |
+| `queryset` | Consulta depois de busca, filtros e ordem |
+| `result_list` | Objetos da pagina atual |
+| `result_count` | Quantidade depois dos filtros |
+| `full_result_count` | Quantidade antes dos filtros de tela |
+| `filter_specs` | Objetos que representam os filtros |
+| `page_num` | Pagina solicitada |
+| `paginator` | Paginador da consulta |
+| `model_admin` | Admin responsavel pela listagem |
+
+O `QuerySet` e avaliado de forma preguiçosa. Os metodos encadeiam a consulta;
+a execucao SQL ocorre quando contagens, paginacao ou iteracao exigem os dados.
+
+#### 3.15.6. Customizacao de `ModelAdminPlus.changelist_view()`
+
+O wrapper do SUAP esta em
+`djtools/contrib/admin/options/__init__.py:348-385`:
+
+```python
+@csrf_protect_m
+def changelist_view(self, request, extra_context=None):
+    self.request = request
+    request.help_key = (
+        f'{self.model._meta.app_label}.'
+        f'change_{self.model.__name__.lower()}'
+    )
+
+    if self.export_to_xls and 'export_to_xls' in request.GET:
+        request.GET._mutable = True
+        del request.GET['export_to_xls']
+        queryset = self.get_current_queryset(request)
+        return tasks.admin_export('xls', queryset, request, self)
+
+    more_context = {
+        'object_tools_items': self.get_action_bar(request),
+        'title': self.model._meta.verbose_name_plural,
+        'disable_general_tabs': True,
+    }
+
+    retorno = super().changelist_view(request, more_context)
+
+    if is_ajax(request) and hasattr(retorno, 'context_data'):
+        return utils.render(
+            'djtools/templates/adminutils/content_main_admin.html',
+            retorno.context_data,
+        )
+    return retorno
+```
+
+O recorte omite CSV, Sophia e o tratamento de filtro invalido, mas preserva o
+fluxo principal. A customizacao:
+
+- disponibiliza o request na instancia do Admin;
+- configura a chave de ajuda;
+- desvia requisicoes de exportacao antes da resposta HTML;
+- acrescenta action bar, titulo e breadcrumbs;
+- chama o ciclo nativo com `super()`;
+- em AJAX, devolve somente o fragmento principal da listagem.
+
+`@csrf_protect_m` e a versao aplicavel a metodos da protecao CSRF do Django.
+Ela e especialmente relevante porque a mesma view tambem recebe `POST` de
+actions e de edicao em massa.
+
+#### 3.15.7. O que o `ChangeListPlus` acrescenta
+
+`ChangeListPlus` herda do `ChangeList` nativo em
+`djtools/contrib/admin/views/__init__.py:19-170`:
+
+```python
+class ChangeListPlus(ChangeList):
+    ALL_VAR = 'all'
+    ORDER_VAR = 'o'
+    PAGE_VAR = 'p'
+    SEARCH_VAR = 'q'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Tratamento adicional para SearchField do SUAP.
+        ...
+        return qs
+
+    def get_filters(self, request):
+        # Filtros nativos, relacionados e autocomplete do SUAP.
+        ...
+
+    def get_ordering(self, request, queryset):
+        ordering = super().get_ordering(request, queryset)
+        if len(ordering) > 1 and ordering[-1] == '-pk':
+            ordering.pop(-1)
+        return ordering
+```
+
+As principais adaptacoes sao:
+
+1. **Busca em `SearchField`:** nas linhas `31-48`, normaliza termos para ASCII
+   em maiusculas e troca a busca aplicada aos campos preparados pelo SUAP.
+2. **Filtros relacionados:** nas linhas `50-117`, identifica relacionamentos,
+   limita opcoes ao queryset permitido e pode montar `QuerysetACListFilter`.
+3. **Hierarquia de datas:** nas linhas `119-148`, converte ano, mes e dia em
+   limites `gte` e `lt`.
+4. **Validacao dos lookups:** nas linhas `55-57` e `155-164`, rejeita filtros
+   nao permitidos ou campos inexistentes.
+5. **Ordenacao:** nas linhas `166-170`, adapta o criterio adicional `-pk` que o
+   Django pode acrescentar para desempate.
+
+`ChangeListPlus` nao substitui o ORM. Ele interpreta a requisicao e compoe
+novas operacoes sobre o `QuerySet` inicial entregue pelo Admin.
+
+#### 3.15.8. Parametros GET da listagem
+
+Busca, filtros, tabs, ordenacao e pagina ficam na query string. Isso permite
+recarregar, compartilhar e exportar o mesmo recorte.
+
+| Parametro | Exemplo | Funcao |
+|---|---|---|
+| `q` | `q=paloma` | Termo de `search_fields` |
+| Campo/lookup | `situacao__id__exact=1` | Filtro aplicado ao ORM |
+| `tab` | `tab=tab_suap` | Aba criada por `CustomTabListFilter` |
+| `o` | `o=2` ou `o=-2` | Indice da coluna usada na ordenacao |
+| `p` | `p=1` | Pagina solicitada pelo Admin |
+| `all` | `all=1` | Solicita todos, dentro do limite permitido |
+| `export_to_xls` | `export_to_xls=1` | Desvia a resposta para exportacao |
+
+Exemplo didatico:
+
+```text
+/admin/edu/aluno/?q=paloma&situacao__id__exact=1&tab=tab_suap&p=0
+```
+
+Leitura:
+
+- parte do escopo de `AlunoAdmin.get_queryset()`;
+- aplica a aba de alunos matriculados no SUAP;
+- restringe a situacao de chave `1`;
+- pesquisa `paloma` nos `search_fields`;
+- entrega a pagina indicada.
+
+Os nomes exatos dos filtros dependem do tipo de campo e do filtro criado. Os
+valores da URL sao entrada do usuario e nao constituem autorizacao. O
+`get_queryset()` e as permissoes precisam limitar os dados antes e durante o
+processamento.
+
+#### 3.15.9. Exemplo real: tabs de `AlunoAdmin`
+
+`AlunoAdmin` inclui `CustomTabListFilter` em `edu/admin.py:1603` e declara as
+tabs em `edu/admin.py:1633-1649`:
+
+```python
+def tab_suap(self, request, queryset):
+    return queryset.filter(
+        codigo_academico__isnull=True,
+        matriz__id__isnull=False,
+    )
+
+tab_suap.short_description = 'Matriculados no Suap'
+
+def get_tabs(self, request):
+    return ['tab_suap', 'tab_q_academico', 'tab_integralizados']
+```
+
+`CustomTabListFilter`, em
+`djtools/contrib/admin/filters/__init__.py:149-171`, transforma os nomes
+devolvidos por `get_tabs()` em opcoes da interface. Depois, chama o metodo da
+tab selecionada com o queryset que ja percorre o ciclo da listagem.
+
+Assim, uma tab nao e uma nova tabela nem uma permissao: e mais um filtro sobre
+o conjunto permitido.
+
+#### 3.15.10. Renderizacao do resultado
+
+`ModelAdminPlus` define em
+`djtools/contrib/admin/options/__init__.py:119-121`:
+
+```python
+change_list_template = 'djtools/templates/adminutils/change_list.html'
+```
+
+Esse template estende o Admin nativo em
+`djtools/templates/adminutils/change_list.html:1`:
+
+```django
+{% extends "admin/change_list.html" %}
+```
+
+Nas linhas `200-203`, ele cria o recipiente da listagem e inclui o fragmento
+principal. O fragmento
+`djtools/templates/adminutils/content_main_admin.html:13-70` usa `cl` para
+renderizar:
+
+- formulario de pesquisa;
+- `cl.filter_specs`;
+- hierarquia de datas;
+- `cl.result_list` pela tag `{% result_list cl %}`;
+- actions;
+- paginacao.
+
+O JavaScript de `change_list.html:40-162` reconstroi a query string e, quando
+`filters_ajax = True`, atualiza somente `#content-main`. No servidor, o retorno
+parcial e produzido por `ModelAdminPlus.changelist_view()` nas linhas
+`382-383`.
+
+#### 3.15.11. Exportacao preservando o recorte
+
+Ao receber `export_to_xls=1`, o `ModelAdminPlus` remove apenas esse parametro e
+chama `get_current_queryset()`. O metodo, em
+`djtools/contrib/admin/options/__init__.py:237-259`, instancia novamente o
+`ChangeListPlus` com a mesma requisicao e devolve `cl.get_queryset(request)`.
+
+```text
+mesmo escopo + mesma busca + mesmos filtros + mesma tab
+                         |
+                         v
+                 queryset exportado
+```
+
+Esse fluxo evita exportar indiscriminadamente todos os registros quando a tela
+esta filtrada. A tarefa final esta em `djtools/tasks.py:48-89`.
+
+#### 3.15.12. GET, POST e respostas possiveis
+
+| Requisicao | Resultado principal |
+|---|---|
+| `GET` comum | Pagina completa da listagem |
+| `GET` AJAX | Fragmento `content_main_admin.html` |
+| `GET` com exportacao | `XlsResponse` ou `CsvResponse` |
+| `POST` com action | Executa uma operacao sobre objetos selecionados |
+| `POST` com `list_editable` | Valida e salva o formset da listagem |
+
+Por isso `changelist_view()` e mais do que uma view de consulta: ela tambem
+coordena operacoes em massa e pode devolver tipos diferentes de resposta.
+
+#### 3.15.13. Como demonstrar em aula
+
+1. Acesse `/admin/edu/aluno/` e abra a aba de rede do navegador.
+2. Pesquise um nome e identifique `q` na URL.
+3. Aplique situacao e curso e observe os parametros de filtro.
+4. Troque de tab e identifique `tab=...`.
+5. Clique em um cabecalho ordenavel e observe `o`.
+6. Avance uma pagina e observe `p`.
+7. Abra `edu/admin.py:1601-1649` e associe cada comportamento a sua
+   configuracao ou metodo.
+8. Abra `ModelAdminPlus.get_changelist()`, em
+   `djtools/contrib/admin/options/__init__.py:200-206`.
+9. Abra `ChangeListPlus`, em
+   `djtools/contrib/admin/views/__init__.py:19-170`.
+10. Abra `content_main_admin.html:13-70` e mostre onde `cl` chega ao template.
+11. Exporte a listagem e confirme que os filtros permanecem aplicados.
+
+Checklist para depurar uma listagem:
+
+- A URL chegou ao `ModelAdmin` esperado?
+- O usuario passou por `has_view_or_change_permission()`?
+- Qual queryset foi devolvido pelo `get_queryset()` do Admin?
+- Quais parametros existem em `request.GET`?
+- Qual tab ou filtro alterou a consulta?
+- `search_fields` aponta para campos validos?
+- A ordenacao e a paginacao sao as esperadas?
+- `cl.result_count` e `cl.full_result_count` fazem sentido?
+- A resposta e pagina completa, fragmento AJAX ou exportacao?
+- Alguma coluna esta causando consultas N+1 durante a renderizacao?
+
+### 3.16. Actions administrativas
+
+#### 3.16.1. Conceito
+
+Uma **action administrativa** e uma operacao executada sobre um conjunto de
+objetos selecionados na changelist. Ela e apropriada para comandos em massa,
+como marcar diarios, aprovar solicitacoes ou enviar registros para uma lixeira.
+
+```text
+selecionar linhas
+    -> escolher uma action
+    -> enviar POST
+    -> receber queryset dos objetos selecionados
+    -> validar e executar a regra
+    -> mensagem, redirecionamento ou outra resposta
+```
+
+A assinatura usual de um metodo de action e:
+
+```python
+def nome_da_action(self, request, queryset):
     ...
 ```
 
-Exemplo de `DiarioAdmin`, `edu/admin.py:1053-1083`:
+| Parametro | Conteudo |
+|---|---|
+| `self` | Instancia do `ModelAdmin` |
+| `request` | Requisicao e usuario autenticado |
+| `queryset` | Objetos selecionados, limitados pelo queryset da listagem |
+
+Uma action nao e um metodo do model e nao e uma view declarada em `urls.py`.
+Ela e um comando registrado no `ModelAdmin` e executado dentro do fluxo de
+`changelist_view()`.
+
+#### 3.16.2. Registro de uma action
+
+O exemplo principal esta em `DiarioAdmin`, no arquivo `edu/admin.py:1053`:
 
 ```python
 actions = (
+    'alternar_primeiro_semestre',
+    'alternar_segundo_semestre',
+    'registrar_entrega_fisica',
+    'cancelar_entrega_fisica',
     'habilitar_integracao_com_moodle',
     'desabilitar_integracao_com_moodle',
 )
+```
 
+Cada string deve corresponder a um metodo da classe. O Django resolve esses
+nomes por meio de `ModelAdmin.get_action()`, implementado em
+`django/contrib/admin/options.py:1031-1056` na versao 4.1.5. O resultado e uma
+tupla:
 
-def habilitar_integracao_com_moodle(self, request, queryset):
-    queryset.update(integracao_com_moodle=True)
-    messages.success(request, 'Habilitacao realizada com sucesso.')
+```text
+(funcao, nome_interno, descricao)
+```
 
+A descricao apresentada ao usuario e definida tradicionalmente com
+`short_description`:
 
-habilitar_integracao_com_moodle.short_description = (
-    'Habilitar Integracao com Moodle'
+```python
+registrar_entrega_fisica.short_description = (
+    'Registrar Entrega Física'
 )
 ```
 
-`actions`, na linha `1053`, registra os nomes dos metodos que aparecerao no
-seletor. `short_description` fornece o texto exibido para o usuario.
-
-#### 6.1.1. Da selecao ate a execucao
-
-O fluxo de uma action comum e:
-
-```text
-usuario marca linhas na listagem
-  -> escolhe uma opcao no seletor de actions
-  -> formulario envia POST para a propria changelist
-  -> POST contem action, _selected_action e select_across
-  -> Django encontra o metodo em get_actions()
-  -> restringe o queryset aos IDs selecionados
-  -> chama metodo(self, request, queryset)
-  -> action altera dados e registra mensagem
-  -> changelist e recarregada
-```
-
-O queryset de entrada parte do `get_queryset()` do Admin e ainda recebe busca,
-filtros e tabs. Em seguida, o Django aplica os identificadores selecionados.
-Uma action nao deve reconstruir a operacao com `Model.objects.all()`, pois isso
-pode abandonar tanto a selecao quanto o escopo de seguranca.
-
-O campo `select_across` diferencia duas situacoes:
-
-- falso: processar somente as caixas marcadas na pagina;
-- verdadeiro: processar todos os registros do resultado filtrado, quando a
-  interface oferece essa opcao.
-
-#### 6.1.2. Mensagem e resposta
-
-No exemplo, a alteracao e seguida por:
+O Django 4.1.5 tambem oferece a sintaxe nativa moderna:
 
 ```python
-messages.success(request, 'Habilitacao realizada com sucesso.')
-```
-
-A mensagem e armazenada pelo framework de mensagens e exibida depois que o
-Admin recarrega a listagem. Uma action pode retornar `None`; nesse caso, o
-Django volta para a changelist. Ela tambem pode devolver uma `HttpResponse`,
-por exemplo um arquivo, um redirecionamento ou uma pagina intermediaria.
-
-Para uma mensagem mais informativa, pode-se usar a quantidade realmente
-afetada:
-
-```python
-total = queryset.update(integracao_com_moodle=True)
-messages.success(
-    request,
-    f'{total} diario(s) habilitado(s) para integracao.',
+@admin.action(
+    permissions=['change'],
+    description='Registrar entrega fisica',
 )
-```
-
-#### 6.1.3. Actions que exigem confirmacao
-
-O Django nao cria uma confirmacao intermediaria para toda action. Quando a
-operacao for destrutiva ou exigir parametros adicionais, o metodo pode:
-
-1. receber a primeira submissao com os objetos selecionados;
-2. devolver um template de confirmacao contendo os IDs em campos ocultos;
-3. na confirmacao, validar novamente permissao e estado dos objetos;
-4. executar a operacao e redirecionar com uma mensagem.
-
-Estrutura reduzida:
-
-```python
-def arquivar(self, request, queryset):
-    if 'confirmar' not in request.POST:
-        return TemplateResponse(
-            request,
-            'admin/confirmar_arquivamento.html',
-            {
-                'queryset': queryset,
-                'action': 'arquivar',
-            },
-        )
-
-    # Revalidar antes de alterar; o estado pode ter mudado.
-    total = queryset.filter(pode_arquivar=True).update(arquivado=True)
-    self.message_user(request, f'{total} registro(s) arquivado(s).')
-```
-
-Esse e um molde didatico. O template precisa reenviar `action` e cada
-`_selected_action`; caso contrario, o Admin perde a selecao na segunda
-requisicao.
-
-#### 6.1.4. `queryset.update()` x `obj.save()`
-
-O proprio `DiarioAdmin` permite comparar as duas abordagens. A action de
-integracao usa `update()` em `edu/admin.py:1075-1077`:
-
-```python
-queryset.update(integracao_com_moodle=True)
-```
-
-Ja `alternar_primeiro_semestre()`, em `edu/admin.py:1085-1089`, percorre os
-objetos:
-
-```python
-for diario in queryset.filter(componente_curricular__segundo_semestre=True):
-    diario.segundo_semestre = False
-    diario.save()
-```
-
-| Aspecto | `queryset.update()` | `obj.save()` em loop |
-|---|---|---|
-| SQL | normalmente um unico `UPDATE` | um `UPDATE` por objeto |
-| desempenho em lote | melhor | menor para grandes conjuntos |
-| `Model.save()` sobrescrito | nao executa | executa |
-| signals `pre_save`/`post_save` | nao executa | executa |
-| decisao diferente por objeto | limitada a expressoes SQL | simples de implementar |
-| retorno | quantidade de linhas afetadas | retorno usual de `save()` |
-
-Nenhuma das duas opcoes chama automaticamente `full_clean()` do model. A
-action deve validar explicitamente as regras necessarias. Use `update()` quando
-a alteracao puder ser feita diretamente no banco sem efeitos de `save()`;
-use o loop quando cada objeto precisar passar por comportamento individual.
-
-Cuidados com actions:
-
-- verificar permissao para a operacao, nao apenas para listar;
-- validar o estado de cada objeto;
-- usar transacao quando a operacao precisar ser atomica;
-- compreender que `queryset.update()` nao chama `save()` nem signals de save;
-- apresentar confirmacao para operacoes destrutivas;
-- informar claramente sucesso, falha parcial ou quantidade processada.
-
-O `ModelAdminPlus` remove a action padrao `delete_selected` em
-`djtools/contrib/admin/options/__init__.py:148-154`.
-
-### 6.2. Inlines
-
-Inline permite editar objetos filhos relacionados dentro do formulario do
-objeto pai. O Django constroi um **formset**: um conjunto de formularios do
-mesmo model, acompanhado de dados de controle sobre quantos formularios foram
-enviados, criados ou removidos.
-
-#### 6.2.1. Exemplo real: horarios de um campus
-
-Exemplo em `edu/admin.py:356-382`:
-
-```python
-class HorarioAulaInline(admin.TabularInline):
-    model = HorarioAula
-    extra = 3
-
-
-class HorarioCampusAdmin(ModelAdminPlus):
-    inlines = [HorarioAulaInline]
-```
-
-O relacionamento que permite o inline esta no model. Em
-`edu/models/cadastros_gerais.py:526-533`, `HorarioCampus` e o pai. Em
-`edu/models/cadastros_gerais.py:560-573`, cada `HorarioAula` possui a chave
-estrangeira para ele:
-
-```python
-class HorarioAula(LogModel):
-    horario_campus = models.ForeignKeyPlus(
-        'edu.HorarioCampus',
-        on_delete=models.CASCADE,
-    )
-    numero = models.PositiveIntegerField(choices=HORARIO_CHOICES)
-    turno = models.ForeignKeyPlus('edu.Turno', on_delete=models.CASCADE)
-    inicio = models.CharFieldPlus(max_length=5)
-    termino = models.CharFieldPlus(max_length=5)
-```
-
-Na tela de alteracao de `HorarioCampus`, o Admin identifica automaticamente a
-`ForeignKey` e associa cada linha do inline ao objeto pai. A tela pode ser
-aberta pela listagem:
-
-```text
-/admin/edu/horariocampus/
-```
-
-Depois, selecione um horario de campus para acessar sua tela de edicao.
-
-#### 6.2.2. O papel de cada elemento
-
-| Elemento | Neste exemplo | Funcao |
-|---|---|---|
-| objeto pai | `HorarioCampus` | registro principal salvo pelo Admin |
-| objetos filhos | `HorarioAula` | horarios pertencentes ao campus |
-| inline | `HorarioAulaInline` | configuracao visual e funcional dos filhos |
-| formset | conjunto de forms de `HorarioAula` | valida e salva varias linhas juntas |
-| `extra = 3` | tres formularios vazios | oferece espaco inicial para novas linhas |
-
-`extra = 3` nao cria tres registros automaticamente. Formularios extras
-completamente vazios sao ignorados; um novo `HorarioAula` so e criado quando a
-linha e preenchida e validada.
-
-O formset tambem envia um *management form*, com campos internos semelhantes a:
-
-```text
-horarioaula_set-TOTAL_FORMS
-horarioaula_set-INITIAL_FORMS
-```
-
-Esses valores permitem ao Django distinguir filhos existentes, novas linhas e
-linhas marcadas para exclusao. Eles devem estar presentes no `POST`; alterar
-esses contadores manualmente nao evita a validacao dos formularios.
-
-Por padrao, o inline tambem pode apresentar a opcao de exclusao dos filhos
-existentes. O Admin somente processa essa marcacao quando a exclusao e
-permitida. Separadamente, o `on_delete=models.CASCADE` da `ForeignKey`, em
-`edu/models/cadastros_gerais.py:569`, determina que a exclusao do proprio
-`HorarioCampus` tambem exclua seus `HorarioAula`. Sao dois fluxos diferentes:
-excluir uma linha pelo formset e excluir o objeto pai.
-
-#### 6.2.3. Validacao e salvamento
-
-O fluxo conceitual e:
-
-```text
-POST da tela
-   -> valida o ModelForm de HorarioCampus
-   -> valida o formset de HorarioAula
-   -> salva o objeto pai
-   -> atribui o pai aos novos filhos pela ForeignKey
-   -> salva inclusoes, alteracoes e exclusoes do formset
-   -> salva relacoes many-to-many, quando existirem
-```
-
-O pai precisa ser salvo antes dos novos filhos porque sua chave primaria sera
-usada em `HorarioAula.horario_campus_id`. Se qualquer parte nao for valida, a
-tela e reapresentada com os erros e o conjunto nao deve ser parcialmente
-confirmado pelo fluxo normal do Admin.
-
-O `HorarioAulaInline` tambem customiza o widget de `turno` e inclui JavaScript
-em `edu/admin.py:360-371`. Essas alteracoes afetam a interface; a relacao e o
-salvamento continuam sendo responsabilidade do inline formset.
-
-#### 6.2.4. `TabularInline` x `TabularInlinePlus`
-
-`admin.TabularInline` pertence ao Django e mostra cada filho como uma linha de
-tabela. O `TabularInlinePlus` e uma extensao do DJTools, implementada em
-`djtools/contrib/admin/options/__init__.py:52-68`:
-
-```python
-class TabularInlinePlus(admin.TabularInline):
-    formfield_overrides = FORMFIELD_OVERRIDES
-
-    def get_formset(self, request, obj=None, **kwargs):
-        FormSetClass = super().get_formset(request, obj, **kwargs)
-        FormSetClass.form.request = request
-        return FormSetClass
-```
-
-Comparacao:
-
-| Recurso | `TabularInline` | `TabularInlinePlus` |
-|---|---:|---:|
-| formset inline padrao | sim | sim, por heranca |
-| exibicao tabular | sim | sim |
-| widgets regionais para data e hora do SUAP | nao automaticamente | sim |
-| `request` disponivel na classe do form | nao automaticamente | sim |
-
-Um uso real do `TabularInlinePlus` aparece em `edu/admin.py:3645-3660`.
-`AutorizacaoInline` e `ReconhecimentoInline` sao filhos de `MatrizCursoAdmin`;
-a chave estrangeira de `Autorizacao` para `MatrizCurso` pode ser vista em
-`edu/models/cursos.py:1286-1289`.
-
-Use inline quando a relacao for clara e o volume relacionado for pequeno. Um
-inline com centenas de registros pode tornar a tela lenta e dificil de usar.
-Para volumes grandes, uma listagem separada com filtros e uma tela propria de
-edicao costuma ser mais adequada.
-
-### 6.3. Hooks de salvamento
-
-Hooks sao pontos de extensao chamados pelo Django durante ou depois de uma
-operacao administrativa. Eles permitem acrescentar comportamento sem
-reescrever toda a view de inclusao, alteracao ou exclusao.
-
-Os principais deste encontro sao:
-
-```python
-save_model(request, obj, form, change)
-save_related(request, form, formsets, change)
-delete_model(request, obj)
-response_add(request, obj)
-response_change(request, obj)
-```
-
-Eles nao sao equivalentes. O fluxo simplificado de uma inclusao ou alteracao e:
-
-```text
-form.is_valid() e formsets validos
-    -> save_form() prepara o objeto
-    -> save_model() salva o objeto principal
-    -> save_related() salva M2M e inlines
-    -> response_add() ou response_change() escolhe a resposta HTTP
-```
-
-O fluxo de exclusao passa por `delete_model()` e termina na resposta propria
-de exclusao. Os hooks `response_add()` e `response_change()` acontecem depois
-do salvamento; sua responsabilidade principal e decidir para onde o navegador
-vai e qual mensagem sera apresentada.
-
-#### 6.3.1. `save_model()`
-
-Assinatura:
-
-```python
-def save_model(self, request, obj, form, change):
+def registrar_entrega_fisica(self, request, queryset):
     ...
 ```
 
+O decorador esta em `django/contrib/admin/decorators.py:1-31`. Ele apenas grava
+metadados como `allowed_permissions` e `short_description` na funcao.
+
+#### 3.16.3. Como a action aparece na listagem
+
+Durante a criacao da changelist, o Django chama `get_actions(request)`. A
+implementacao nativa esta em `django/contrib/admin/options.py:974-1029`:
+
+1. coleta actions globais do `AdminSite`;
+2. coleta os nomes declarados em `ModelAdmin.actions`;
+3. resolve cada funcao e sua descricao;
+4. filtra actions que declaram `allowed_permissions`;
+5. devolve um dicionario indexado pelo nome da action;
+6. transforma esse dicionario nas opcoes do formulario.
+
+Quando existe pelo menos uma action, `get_changelist_instance()`, em
+`django/contrib/admin/options.py:827-831`, acrescenta `action_checkbox` ao
+`list_display`. O template apresenta os checkboxes e o seletor de operacoes.
+
+Se a classe declarar:
+
+```python
+actions = None
+```
+
+todas as actions sao desabilitadas naquela tela.
+
+#### 3.16.4. Alteracao feita pelo `ModelAdminPlus`
+
+O Django normalmente oferece a action global `delete_selected`. O
+`ModelAdminPlus` a remove em
+`djtools/contrib/admin/options/__init__.py:148-154`:
+
+```python
+def get_actions(self, request):
+    actions = super().get_actions(request)
+    try:
+        del actions['delete_selected']
+    except KeyError:
+        pass
+    return actions
+```
+
+Assim, uma classe baseada em `ModelAdminPlus` nao recebe automaticamente a
+exclusao em massa padrao. Se o sistema precisar dessa operacao, deve criar uma
+action explicita, com regras e permissoes adequadas ao dominio.
+
+Essa escolha reduz o risco de exclusoes administrativas amplas sem uma regra
+de negocio especifica.
+
+#### 3.16.5. Fluxo do `POST`
+
+O processamento nativo acontece em dois pontos de
+`django/contrib/admin/options.py`:
+
+- `changelist_view()`: linhas `1948-2000`;
+- `response_action()`: linhas `1538-1605`.
+
+Fluxo simplificado:
+
+```text
+POST da changelist
+  -> le a action selecionada
+  -> le os PKs em _selected_action
+  -> valida o ActionForm
+  -> localiza a funcao em get_actions(request)
+  -> restringe o queryset aos PKs selecionados
+  -> chama func(self, request, queryset)
+  -> usa o HttpResponse retornado ou volta para a listagem
+```
+
+Trecho essencial de `response_action()`:
+
+```python
+selected = request.POST.getlist(
+    helpers.ACTION_CHECKBOX_NAME
+)
+
+if not select_across:
+    queryset = queryset.filter(pk__in=selected)
+
+response = func(self, request, queryset)
+
+if isinstance(response, HttpResponseBase):
+    return response
+return HttpResponseRedirect(request.get_full_path())
+```
+
+O nome real do campo de selecao e `_selected_action`. Quando o usuario escolhe
+"selecionar todos", `select_across` faz a action receber todo o queryset
+filtrado, e nao apenas os objetos da pagina atual.
+
+Por isso, antes de executar uma action, deve-se observar a quantidade de
+registros e lembrar que o queryset pode ser muito maior do que as linhas
+visiveis na pagina.
+
+#### 3.16.6. Relacao com escopo, busca e filtros
+
+O queryset entregue a action nasce da mesma `ChangeList` usada na tela:
+
+```text
+ModelAdmin.get_queryset()
+    -> escopo permitido
+    -> tab
+    -> filtros
+    -> pesquisa
+    -> objetos selecionados ou select_across
+    -> action
+```
+
+Em `changelist_view()`, o Django chama:
+
+```python
+self.response_action(
+    request,
+    queryset=cl.get_queryset(request),
+)
+```
+
+Portanto, uma action de `AlunoAdmin` deve partir do escopo definido por
+`AlunoAdmin.get_queryset()`. Isso nao dispensa a validacao da operacao: escopo
+responde quais objetos podem ser localizados; autorizacao responde se o usuario
+pode executar aquele comando sobre eles.
+
+#### 3.16.7. Exemplo 1: atualizacao em uma unica consulta
+
+`DiarioAdmin` implementa a action em `edu/admin.py:1101-1105`:
+
+```python
+def registrar_entrega_fisica(self, request, queryset):
+    queryset.update(entregue_fisicamente=True)
+    messages.success(
+        request,
+        'Entrega física registrada com sucesso.',
+    )
+
+registrar_entrega_fisica.short_description = (
+    'Registrar Entrega Física'
+)
+```
+
+Leitura linha a linha:
+
+- `queryset` contem os diarios selecionados;
+- `update()` produz uma atualizacao direta no banco;
+- `messages.success()` armazena uma mensagem para a proxima resposta;
+- como o metodo nao retorna `HttpResponse`, o Django volta para a changelist;
+- `short_description` define o texto apresentado no seletor.
+
+Em termos conceituais, o ORM executa algo semelhante a:
+
+```sql
+UPDATE edu_diario
+SET entregue_fisicamente = TRUE
+WHERE id IN (...);
+```
+
+`queryset.update()` e eficiente, mas nao chama `save()` de cada model e nao
+executa sinais `pre_save`/`post_save`. Ele deve ser usado somente quando a
+alteracao nao depende desses efeitos colaterais.
+
+#### 3.16.8. Exemplo 2: iteracao e `save()` por objeto
+
+Em `edu/admin.py:1085-1091`, outra action segue estrategia diferente:
+
+```python
+def alternar_primeiro_semestre(self, request, queryset):
+    for diario in queryset.filter(
+        componente_curricular__segundo_semestre=True
+    ):
+        diario.segundo_semestre = False
+        diario.save()
+
+    messages.success(
+        request,
+        'Diário alterado com sucesso.',
+    )
+
+alternar_primeiro_semestre.short_description = (
+    'Alternar para Primeiro Semestre Letivo'
+)
+```
+
+Nesse caso:
+
+- um filtro adicional evita processar objetos que nao atendem a condicao;
+- cada objeto e carregado em Python;
+- `save()` executa o ciclo normal de salvamento do model;
+- validacoes ou efeitos implementados em `save()` podem ser executados;
+- ocorre, em geral, uma operacao de escrita para cada objeto.
+
+Comparacao:
+
+| Estrategia | Vantagem | Cuidado |
+|---|---|---|
+| `queryset.update()` | Uma atualizacao SQL, adequada a grande volume | Nao chama `save()` nem sinais de salvamento |
+| `for obj ...; obj.save()` | Executa comportamento individual do model | Mais consultas e possibilidade de falha no meio do lote |
+
+Se o conjunto precisar ser processado como uma unidade indivisivel, a action
+pode utilizar `@transaction.atomic` ou um bloco `with transaction.atomic():`.
+A decisao depende da regra: em alguns processos pode ser desejavel preservar
+os itens ja concluídos; em outros, qualquer falha deve desfazer todo o lote.
+
+#### 3.16.9. Exemplo 3: actions dependentes da tab
+
+`DiarioAdmin.get_actions()`, em `edu/admin.py:1069-1073`, remove todas as
+actions em uma tab especifica:
+
+```python
+def get_actions(self, request):
+    if request.GET.get('tab') == (
+        'tab_semestrais_em_cursos_anuais'
+    ):
+        return {}
+    return super().get_actions(request)
+```
+
+Outro exemplo mais seletivo esta em `MaterialAulaAdmin`,
+`edu/admin.py:2408-2414`:
+
+```python
+def get_actions(self, request):
+    actions = super().get_actions(request)
+
+    if request.GET.get('tab') != 'tab_meus_materiais':
+        actions.pop('remover_selecionadas', None)
+
+    if request.GET.get('tab') != 'tab_compartilhados':
+        actions.pop('clonar_selecionadas', None)
+
+    return actions
+```
+
+`get_actions()` controla quais comandos aparecem para aquela requisicao. Ele
+pode considerar tab, usuario ou contexto, mas a funcao da action ainda deve
+validar a autorizacao antes de modificar os dados.
+
+#### 3.16.10. Permissoes das actions
+
+O Django filtra automaticamente apenas actions que possuem o atributo
+`allowed_permissions`. A implementacao esta em
+`django/contrib/admin/options.py:992-1006`.
+
+Exemplo moderno:
+
+```python
+@admin.action(
+    permissions=['change'],
+    description='Marcar selecionados como conferidos',
+)
+def marcar_como_conferidos(self, request, queryset):
+    if not request.user.has_perm('edu.change_exemplo'):
+        raise PermissionDenied
+    queryset.update(conferido=True)
+```
+
+O decorador faz o Django consultar `has_change_permission(request)` antes de
+mostrar a action. Contudo, no `ModelAdminPlus`, a verificacao geral de
+alteracao com `obj=None` pode aceitar `view` como alternativa, conforme
+`djtools/contrib/admin/options/__init__.py:298-305`.
+
+Por isso, para uma action que altera dados no SUAP, e prudente validar dentro
+da propria funcao:
+
+- a permissao de model necessaria;
+- grupos ou papeis contextuais;
+- campus, curso ou diretoria;
+- estado de cada objeto;
+- se todos os itens podem realmente sofrer a operacao.
+
+As actions atuais de `DiarioAdmin`, em `edu/admin.py:1053-1111`, usam o estilo
+tradicional e nao declaram `allowed_permissions`. Ao alterar ou criar uma
+action semelhante, a autorizacao precisa ser analisada explicitamente; a mera
+presenca do comando na interface nao e uma garantia suficiente.
+
+#### 3.16.11. Mensagens e respostas
+
+A API de mensagens informa o resultado depois do redirecionamento:
+
+```python
+messages.success(request, 'Operacao realizada com sucesso.')
+messages.warning(request, 'Alguns registros foram ignorados.')
+messages.error(request, 'Nao foi possivel concluir a operacao.')
+```
+
+Se a action nao retornar uma resposta, `response_action()` redireciona para a
+mesma changelist. Se retornar um objeto derivado de `HttpResponse`, essa
+resposta e utilizada diretamente:
+
+```python
+def exportar_selecionados(self, request, queryset):
+    rows = [['ID', 'Descricao']]
+    rows += [[obj.pk, str(obj)] for obj in queryset]
+    return CsvResponse(rows)
+```
+
+Isso permite criar confirmacoes intermediarias, downloads ou
+redirecionamentos. Quando houver uma tela de confirmacao, ela deve preservar os
+IDs selecionados e verificar novamente permissao e estado no `POST` final.
+
+#### 3.16.12. Cuidados de implementacao
+
+- Nao confie somente no fato de a action estar visivel.
+- Valide permissao e regra de negocio no servidor.
+- Considere que `select_across` pode enviar milhares de registros.
+- Filtre os estados permitidos antes da alteracao.
+- Informe quantos objetos foram realmente processados.
+- Escolha conscientemente entre `update()` e `save()`.
+- Use transacao quando o lote precisar ser atomico.
+- Evite consultas adicionais dentro do laço; use `select_related()` ou
+  `prefetch_related()` quando necessario.
+- Nao reutilize dados livres do `POST` sem validacao.
+- Registre auditoria quando a operacao for sensivel.
+
+Uma forma mais informativa de mensagem e:
+
+```python
+def registrar_entrega_fisica(self, request, queryset):
+    if not request.user.has_perm('edu.change_diario'):
+        raise PermissionDenied
+
+    alterados = queryset.filter(
+        entregue_fisicamente=False
+    ).update(entregue_fisicamente=True)
+
+    self.message_user(
+        request,
+        f'{alterados} diario(s) atualizado(s).',
+        level=messages.SUCCESS,
+    )
+```
+
+Esse e um exemplo didatico de melhoria e nao uma transcricao do codigo atual.
+
+#### 3.16.13. Como demonstrar em aula
+
+1. Acesse `/admin/edu/diario/` com um usuario de teste autorizado.
+2. Abra `edu/admin.py:1053` e relacione o seletor da tela a `actions`.
+3. Selecione poucos diarios e execute `Registrar Entrega Fisica`.
+4. Observe o `POST` e o campo `_selected_action` nas ferramentas do navegador.
+5. Abra `edu/admin.py:1101-1105` e acompanhe `queryset.update()`.
+6. Compare com `alternar_primeiro_semestre`, em `edu/admin.py:1085-1091`.
+7. Mostre a mensagem e o redirecionamento para a mesma listagem.
+8. Abra `ModelAdminPlus.get_actions()`, em
+   `djtools/contrib/admin/options/__init__.py:148-154`, e mostre a remocao de
+   `delete_selected`.
+9. Troque para a tab usada em `edu/admin.py:1069-1073` e mostre a retirada
+   dinamica das actions.
+10. Repita com um usuario sem permissao e teste tambem um `POST` direto.
+
+Checklist para revisar uma action:
+
+- Ela esta registrada em `actions`?
+- A descricao apresentada e clara?
+- Qual queryset pode chegar ate ela?
+- Ela valida permissao dentro da operacao?
+- Existe regra contextual por objeto?
+- Pode receber `select_across` com grande volume?
+- Precisa de `update()`, `save()`, transacao ou tarefa assincrona?
+- Informa quantos registros foram processados, ignorados ou rejeitados?
+- O retorno sera redirecionamento, download ou confirmacao?
+- Ha teste com usuario autorizado, restrito e sem permissao?
+
+### 3.17. Hooks de salvamento e redirecionamento
+
+#### 3.17.1. O que e um hook
+
+Um **hook** e um metodo chamado pelo framework em um ponto previsto do fluxo.
+O desenvolvedor pode sobrescreve-lo para acrescentar comportamento sem
+reescrever toda a view administrativa.
+
+No formulario do Admin, os hooks podem ser divididos em dois grupos:
+
+| Grupo | Metodos principais | Finalidade |
+|---|---|---|
+| Persistencia | `save_form()`, `save_model()`, `save_related()`, `save_formset()` | Controlar como o objeto e seus relacionamentos sao salvos |
+| Resposta | `response_add()`, `response_change()` | Escolher mensagem e destino depois do salvamento |
+
+Tambem existem hooks equivalentes para exclusao, como `delete_model()` e
+`delete_queryset()`. Eles pertencem ao ciclo de remocao, nao ao de inclusao ou
+edicao.
+
+#### 3.17.2. Fluxo completo do formulario administrativo
+
+O fluxo nativo de inclusao e edicao esta em
+`django/contrib/admin/options.py:1752-1895`. O nucleo do salvamento aparece nas
+linhas `1790-1812` da versao 4.1.5:
+
+```python
+form = ModelForm(
+    request.POST,
+    request.FILES,
+    instance=obj,
+)
+formsets, inline_instances = self._create_formsets(...)
+
+form_validated = form.is_valid()
+
+if form_validated:
+    new_object = self.save_form(
+        request,
+        form,
+        change=not add,
+    )
+
+if all_valid(formsets) and form_validated:
+    self.save_model(request, new_object, form, not add)
+    self.save_related(request, form, formsets, not add)
+
+    if add:
+        self.log_addition(request, new_object, change_message)
+        return self.response_add(request, new_object)
+
+    self.log_change(request, new_object, change_message)
+    return self.response_change(request, new_object)
+```
+
+Sequencia conceitual:
+
+```text
+POST
+  -> verifica add/change permission
+  -> instancia ModelForm e formsets
+  -> form.is_valid()
+  -> valida todos os formsets
+  -> save_form(commit=False)
+  -> save_model()
+  -> save_related() e save_formset()
+  -> registra historico do Admin
+  -> response_add() ou response_change()
+```
+
+Se o formulario ou algum inline for invalido, os hooks de salvamento nao sao
+executados. A pagina e renderizada novamente com os erros.
+
+#### 3.17.3. `save_form()`: preparar sem persistir
+
+A implementacao nativa esta em
+`django/contrib/admin/options.py:1214-1219`:
+
+```python
+def save_form(self, request, form, change):
+    return form.save(commit=False)
+```
+
+`commit=False` cria ou atualiza a instancia Python, mas ainda nao executa o
+`INSERT` ou `UPDATE`. Isso permite que o proximo hook altere o objeto antes da
+persistencia.
+
 Parametros:
 
-- `request`: requisicao e usuario atual;
-- `obj`: instancia principal preenchida pelo form;
-- `form`: `ModelForm` ja validado;
-- `change`: `False` na inclusao e `True` na alteracao.
+| Parametro | Significado |
+|---|---|
+| `request` | Requisicao e usuario atual |
+| `form` | `ModelForm` ja validado |
+| `change` | `False` na inclusao e `True` na edicao |
 
-O exemplo real esta em `MatrizAdmin`, `edu/admin.py:725-730`:
+Esse hook pode ser sobrescrito quando for necessario preparar a instancia. Na
+maioria dos casos do EDU, entretanto, `save_model()` e o ponto mais claro para
+ajustes imediatamente anteriores ao salvamento.
+
+#### 3.17.4. `save_model()`: persistir o objeto principal
+
+No Django, `save_model()` apenas salva a instancia:
+
+**Implementacao:** `django/contrib/admin/options.py:1221-1225`
+
+```python
+def save_model(self, request, obj, form, change):
+    obj.save()
+```
+
+O objeto recebido ja contem os dados validados do form. Esse hook permite:
+
+- preencher informacoes derivadas;
+- registrar o usuario responsavel;
+- ajustar campos de acordo com inclusao ou edicao;
+- executar uma regra administrativa antes ou depois do salvamento.
+
+Se a sobrescrita depender do comportamento padrao, deve chamar:
+
+```python
+super().save_model(request, obj, form, change)
+```
+
+Sem essa chamada ou um `obj.save()` equivalente, o objeto principal nao sera
+persistido.
+
+`save_model()` nao deve ser usado para aceitar dados invalidos. Validacoes que
+precisam aparecer no formulario pertencem a `clean()`, `clean_<campo>()`,
+validadores ou regras do model.
+
+#### 3.17.5. Exemplo real: `MatrizAdmin.save_model()`
+
+**Arquivo:** `edu/admin.py`  
+**Linhas:** `725-730`
 
 ```python
 def save_model(self, request, obj, form, change):
@@ -4621,121 +2409,161 @@ def save_model(self, request, obj, form, change):
         obj.ch_componentes_tcc = 0
     else:
         obj.ch_projeto_final = 0
+
     super().save_model(request, obj, form, change)
 ```
 
-Antes de persistir a matriz, o hook torna mutuamente coerentes dois modos de
-informar a carga horaria do TCC. A chamada a `super()` executa o salvamento
-normal de `obj`. Omiti-la sem realizar `obj.save()` por outro caminho pode
-impedir a persistencia.
+Leitura linha a linha:
 
-Use `save_model()` para uma informacao que depende do contexto administrativo,
-como registrar o usuario da requisicao. Se a regra deve valer em importacoes,
-scripts, APIs e outras views, ela provavelmente pertence ao model ou a um
-servico de dominio.
+1. o Admin recebe a `Matriz` criada a partir dos dados validados;
+2. se `exige_ch` estiver ativo, zera `ch_componentes_tcc`;
+3. caso contrario, zera `ch_projeto_final`;
+4. chama a implementacao herdada;
+5. o `ModelAdmin` executa `obj.save()`.
 
-#### 6.3.2. `save_related()`
+A regra evita manter valores incompatíveis nos dois campos. O parametro
+`change` permitiria diferenciar inclusao e edicao, embora essa implementacao
+aplique a mesma regra aos dois casos.
+
+> `save_model()` tambem e chamado por edicao em massa via `list_editable`, mas
+> nao e chamado por `queryset.update()` dentro de uma action. Uma action que
+> usa `update()` ignora esse hook e o metodo `save()` do model.
+
+#### 3.17.6. `save_related()` e `save_formset()`
+
+O objeto principal precisa ser salvo antes de relacionamentos muitos-para-
+muitos e inlines, pois esses registros normalmente dependem de sua chave
+primaria.
+
+Implementacao nativa em `django/contrib/admin/options.py:1237-1253`:
+
+```python
+def save_formset(self, request, form, formset, change):
+    formset.save()
+
+def save_related(self, request, form, formsets, change):
+    form.save_m2m()
+
+    for formset in formsets:
+        self.save_formset(
+            request,
+            form,
+            formset,
+            change=change,
+        )
+```
+
+Responsabilidades:
+
+- `form.save_m2m()` persiste campos `ManyToManyField` do form principal;
+- cada `formset` representa um conjunto de objetos relacionados por inline;
+- `save_formset()` permite personalizar o salvamento de cada conjunto;
+- `save_related()` coordena todos os relacionamentos depois do objeto pai.
+
+Ao sobrescrever `save_related()` ou `save_formset()`, normalmente deve-se
+chamar `super()`. Omitir essa chamada pode fazer relacionamentos ou inlines
+desaparecerem silenciosamente do salvamento.
+
+Exemplo didatico para registrar o usuario em objetos de um inline:
+
+```python
+def save_formset(self, request, form, formset, change):
+    instances = formset.save(commit=False)
+
+    for instance in instances:
+        instance.usuario_cadastro = request.user
+        instance.save()
+
+    for deleted in formset.deleted_objects:
+        deleted.delete()
+
+    formset.save_m2m()
+```
+
+Esse exemplo nao foi copiado do EDU; ele demonstra o protocolo completo que
+precisa ser preservado ao assumir manualmente o salvamento do formset.
+
+#### 3.17.7. Log administrativo
+
+Depois de salvar o objeto e os relacionamentos, o Django monta uma descricao
+das mudancas e registra:
+
+```python
+self.log_addition(request, new_object, change_message)
+self.log_change(request, new_object, change_message)
+```
+
+Essas chamadas aparecem em
+`django/contrib/admin/options.py:1804-1812`. Somente depois do log o fluxo chama
+`response_add()` ou `response_change()`.
+
+Portanto, os hooks de resposta recebem um objeto que ja foi salvo e registrado
+no historico administrativo. Eles nao sao o local adequado para a validacao
+principal ou para substituir o salvamento.
+
+#### 3.17.8. `response_add()`: resposta depois da inclusao
+
+A implementacao nativa esta em
+`django/contrib/admin/options.py:1320-1408`. Ela examina os botoes enviados no
+`POST` e escolhe o destino:
+
+| Botao/condicao | Comportamento padrao |
+|---|---|
+| Salvar | Volta para a listagem ou pagina permitida |
+| `_continue` | Abre a edicao do objeto criado |
+| `_addanother` | Abre outro formulario de inclusao |
+| Popup | Fecha/atualiza a janela de selecao |
 
 Assinatura:
 
 ```python
-def save_related(self, request, form, formsets, change):
+def response_add(self, request, obj):
     ...
 ```
 
-Esse hook e chamado depois de o objeto principal possuir chave primaria. Nesse
-momento, o Django pode salvar:
+O objeto possui chave primaria nesse momento. Assim, ela pode ser usada na URL
+de redirecionamento.
 
-- campos `ManyToManyField` do form;
-- objetos filhos enviados por inlines;
-- ajustes que dependem dessas relacoes ja persistidas.
+#### 3.17.9. Exemplo real: salvar Matriz e abrir seu fluxo proprio
 
-Exemplo real em `enquete/admin.py:134-137`:
+`MatrizAdmin` combina o hook anterior com um redirecionamento customizado.
 
-```python
-def save_related(self, request, form, formsets, change):
-    super().save_related(request, form, formsets, change)
-    enquete = form.instance
-    enquete.vinculos_publico.set(enquete.get_publicos())
-```
-
-Primeiro, `super().save_related()` confirma as relacoes enviadas pelo form e
-os formsets. Depois, o codigo recalcula `vinculos_publico` a partir dos
-publicos configurados na enquete. A ordem importa: executar esse calculo antes
-do `super()` poderia usar relacoes antigas ou ainda nao salvas.
-
-#### 6.3.3. `delete_model()`
-
-Assinatura:
-
-```python
-def delete_model(self, request, obj):
-    ...
-```
-
-O hook executa a exclusao de um unico objeto pela tela administrativa. A
-permissao deve ser tratada por `has_delete_permission()`; `delete_model()` e o
-ponto para validar o estado final, excluir e executar efeitos relacionados.
-
-Exemplo real, reduzido aos pontos principais, em
-`plano_trabalho_docente/admin.py:805-818`, dentro de `ItemAtividadeAdmin`:
-
-```python
-def delete_model(self, request, obj):
-    if obj.plano_relatorio.is_travado:
-        raise ValidationError(
-            'O item nao pode ser excluido porque o relatorio foi homologado.'
-        )
-    super().delete_model(request, obj)
-    if obj.importada_suap:
-        ItemImportadoRemovido.objects.create(
-            plano_relatorio=obj.plano_relatorio,
-            id_importacao=obj.id_importacao,
-            atividade=obj.atividade,
-            model_importacao=obj.model_importacao,
-        )
-    obj.notificar_remocao()
-```
-
-O codigo real preserva os dados de uma atividade importada em
-`ItemImportadoRemovido` e envia a notificacao depois da exclusao. Os valores
-necessarios precisam estar carregados em `obj`, pois `super().delete_model()`
-remove o registro principal.
-
-> `delete_model()` nao substitui automaticamente o fluxo de exclusao em lote.
-> Uma action que chama `queryset.delete()` pode nao passar por esse hook para
-> cada objeto. Operacoes em lote precisam declarar explicitamente seus efeitos.
-
-#### 6.3.4. `response_add()`
-
-Assinatura usual:
-
-```python
-def response_add(self, request, obj, post_url_continue=None):
-    ...
-```
-
-Ele recebe o objeto ja criado e deve devolver uma resposta HTTP. O Django usa
-o hook para respeitar botoes como "Salvar e continuar editando"; uma
-sobrescrita pode direcionar o usuario para um fluxo proprio.
-
-Exemplo real em `MatrizAdmin`, `edu/admin.py:751-753`:
+**Arquivo:** `edu/admin.py`  
+**Linhas:** `751-753`
 
 ```python
 def response_add(self, request, obj):
     self.message_user(
         request,
         'Matriz cadastrada com sucesso. '
-        'Por favor, vincule os componentes a matriz.',
+        'Por favor, vincule os componentes à matriz.',
     )
     return HttpResponseRedirect(f'/edu/matriz/{obj.pk}/')
 ```
 
-Depois de cadastrar a matriz, o usuario nao volta para a listagem padrao do
-Admin. Ele e encaminhado para a tela propria em que os componentes podem ser
-vinculados. `response_add()` nao salva novamente o objeto.
+Depois que a matriz e salva:
 
-#### 6.3.5. `response_change()`
+1. uma mensagem de sucesso e adicionada;
+2. `obj.pk` identifica a matriz recem-criada;
+3. a resposta leva para `/edu/matriz/<pk>/`;
+4. o usuario continua o processo vinculando componentes.
+
+Esse fluxo e diferente do Admin padrao: em vez de voltar para
+`/admin/edu/matriz/`, ele abre uma tela especifica do EDU.
+
+Como a sobrescrita sempre retorna sua propria resposta, ela substitui o
+tratamento nativo de `_continue`, `_addanother` e popup. Se esses comportamentos
+precisarem ser preservados, o metodo deve tratar as condicoes ou delegar para:
+
+```python
+return super().response_add(request, obj)
+```
+
+#### 3.17.10. `response_change()`: resposta depois da edicao
+
+A implementacao nativa esta em
+`django/contrib/admin/options.py:1410-1506`. Ela considera popup, “salvar e
+continuar”, “salvar como novo”, “salvar e adicionar outro” e o retorno padrao.
 
 Assinatura:
 
@@ -4744,968 +2572,1477 @@ def response_change(self, request, obj):
     ...
 ```
 
-Esse hook e o equivalente de resposta para uma edicao concluida. Exemplo real
-em `ProfessorAdmin`, `edu/admin.py:1540-1541`:
+Exemplo real em `ProfessorAdmin`, `edu/admin.py:1540-1541`:
 
 ```python
 def response_change(self, request, obj):
     return httprr('..', 'Professor alterado com sucesso.')
 ```
 
-`httprr()` e um helper do DJTools que cria o redirecionamento e registra a
-mensagem para a requisicao seguinte. O caminho `..` leva da URL de alteracao
-para o nivel anterior. Assim como `response_add()`, esse hook escolhe a
-resposta; a alteracao ja foi salva.
+`'..'` e uma URL relativa: partindo da tela de edicao, retorna ao nivel
+anterior. `httprr()` acrescenta a mensagem e cria o redirecionamento.
 
-#### 6.3.6. Quando chamar `super()`
+Outro exemplo aparece em `TurmaMinicursoAdmin`,
+`edu/admin.py:631-635`:
 
-| Hook | Papel do `super()` |
+```python
+def response_add(self, request, obj):
+    return httprr(
+        f'/edu/minicurso/{obj.minicurso.pk}/',
+        'Operação realizada com sucesso.',
+    )
+
+def response_change(self, request, obj):
+    return self.response_add(request, obj)
+```
+
+Inclusao e edicao levam ao mesmo destino porque ambas fazem parte do fluxo de
+manutencao do minicurso.
+
+#### 3.17.11. `httprr()` no SUAP
+
+`httprr()` nao e do Django. E um atalho do DJTools implementado em
+`djtools/utils/response.py:24-84` e exportado por `djtools.utils`.
+
+```python
+def httprr(
+    url,
+    message='',
+    tag='success',
+    anchor='',
+    get_params='',
+    close_popup=False,
+):
+    ...
+```
+
+Ele combina recursos que normalmente exigiriam mais codigo:
+
+- cria `HttpResponseRedirect`;
+- registra mensagem `success`, `warning` ou erro;
+- pode preservar a tab atual;
+- pode acrescentar ancora e parametros GET;
+- pode instruir o fechamento de popup.
+
+Comparacao:
+
+```python
+# Django
+messages.success(request, 'Operacao concluida.')
+return HttpResponseRedirect('/destino/')
+
+# DJTools/SUAP
+return httprr('/destino/', 'Operacao concluida.')
+```
+
+#### 3.17.12. Transacao no `ModelAdminPlus`
+
+O `ModelAdminPlus` envolve inclusao e edicao em transacao:
+
+**Arquivo:** `djtools/contrib/admin/options/__init__.py`  
+**Linhas:** `411-439`
+
+```python
+@csrf_protect_m
+@transaction.atomic
+def add_view(self, request, form_url='', extra_context=None):
+    ...
+    return super().add_view(request, form_url, extra_context)
+
+@csrf_protect_m
+@transaction.atomic
+def change_view(self, request, object_id, form_url='', extra_context=None):
+    ...
+    return super().change_view(
+        request,
+        object_id,
+        form_url,
+        more_context,
+    )
+```
+
+Se uma excecao escapar durante `save_model()`, `save_related()` ou a parte
+transacional do fluxo, o banco pode desfazer o conjunto de alteracoes. Isso
+evita, por exemplo, salvar o objeto principal e deixar seus relacionamentos
+pela metade.
+
+O redirecionamento e a mensagem nao significam que a transacao foi ignorada.
+Eles sao apenas a resposta HTTP produzida ao fim do fluxo bem-sucedido.
+
+#### 3.17.13. Hooks de exclusao
+
+O Django tambem fornece em `django/contrib/admin/options.py:1227-1235`:
+
+```python
+def delete_model(self, request, obj):
+    obj.delete()
+
+def delete_queryset(self, request, queryset):
+    queryset.delete()
+```
+
+- `delete_model()` trata a exclusao individual;
+- `delete_queryset()` trata um queryset de exclusao em massa;
+- `has_delete_permission()` deve autorizar a operacao;
+- regras de integridade e efeitos de `on_delete` continuam valendo.
+
+No `ModelAdminPlus`, a action nativa `delete_selected` e removida, como visto
+no topico de Actions. Ainda assim, os hooks sao relevantes para telas de
+exclusao individual ou para uma action customizada que decida utiliza-los.
+
+#### 3.17.14. O que pertence a cada camada
+
+| Necessidade | Local mais adequado |
 |---|---|
-| `save_model()` | salva o objeto principal |
-| `save_related()` | salva M2M e formsets/inlines |
-| `delete_model()` | exclui o objeto principal |
-| `response_add()` | produz a resposta padrao depois da inclusao |
-| `response_change()` | produz a resposta padrao depois da alteracao |
+| Validar dados e mostrar erro no form | `clean()` ou `clean_<campo>()` |
+| Regra invariavel da entidade | Model/service de dominio |
+| Preparar instancia sem salvar | `save_form()` |
+| Ajustar e salvar objeto no Admin | `save_model()` |
+| Salvar M2M e inlines | `save_related()`/`save_formset()` |
+| Registrar alteracao administrativa | `log_addition()`/`log_change()` |
+| Escolher pagina depois de incluir | `response_add()` |
+| Escolher pagina depois de editar | `response_change()` |
+| Excluir objeto individual | `delete_model()` |
 
-Nos tres primeiros, omitir `super()` exige implementar conscientemente a
-operacao que ele realizaria. Nos hooks de resposta, e valido devolver uma
-resposta propria em vez de chamar `super()`, como fazem os exemplos do EDU.
+Uma regra essencial do dominio nao deve existir apenas em `save_model()`, pois
+o mesmo model pode ser alterado por shell, API, tarefa ou view fora do Admin.
+O hook administrativo e adequado para comportamento exclusivo daquele fluxo.
 
-Antes de colocar uma regra em `save_model()`, pergunte se ela tambem deve valer
-fora do Admin. Se a resposta for sim, provavelmente a regra pertence ao model,
-form ou servico de dominio.
+#### 3.17.15. Erros frequentes
 
-### 6.4. `get_form()` dinamico
+1. **Nao chamar `super().save_model()`:** o objeto pode nao ser salvo.
+2. **Chamar `form.save()` novamente:** pode duplicar ou desorganizar o ciclo.
+3. **Salvar M2M antes do objeto possuir PK:** a relacao nao pode ser criada.
+4. **Nao chamar `super().save_related()`:** M2M e inlines podem ser ignorados.
+5. **Validar somente em `save_model()`:** o usuario recebe uma excecao em vez
+   de erro de formulario.
+6. **Alterar dados em `response_add()`:** a persistencia e o log ja ocorreram.
+7. **Sobrescrever a resposta sem considerar popup e botoes alternativos:**
+   recursos nativos deixam de funcionar.
+8. **Montar URLs com identificador errado:** `obj.pk` e a referencia segura
+   quando a rota espera a chave primaria.
 
-Exemplo em `HorarioCampusAdmin`, `edu/admin.py:387-390`:
+#### 3.17.16. Como demonstrar em aula
 
-```python
-def get_form(self, request, *args, **kwargs):
-    form = super().get_form(request, *args, **kwargs)
-    form.base_fields['uo'].queryset = UnidadeOrganizacional.objects.campi()
-    return form
-```
+1. Abra `django/contrib/admin/options.py:1790-1812` e apresente a ordem dos
+   hooks.
+2. Abra `edu/admin.py:725-730` e leia `MatrizAdmin.save_model()`.
+3. Mostre por que a chamada a `super()` realiza o `obj.save()`.
+4. Abra `edu/admin.py:751-753` e acompanhe `MatrizAdmin.response_add()`.
+5. Cadastre uma matriz e confirme o redirecionamento para `/edu/matriz/<pk>/`.
+6. Compare com `ProfessorAdmin.response_change()`, em
+   `edu/admin.py:1540-1541`.
+7. Abra `djtools/utils/response.py:24-84` e explique `httprr()`.
+8. Mostre `save_related()` em `django/contrib/admin/options.py:1243-1253` e
+   relacione-o aos inlines.
+9. Mostre `@transaction.atomic` em
+   `djtools/contrib/admin/options/__init__.py:411-439`.
+10. Teste os botoes Salvar, Salvar e Continuar e Salvar e Adicionar Outro em
+    um Admin sem resposta customizada; depois compare com `MatrizAdmin`.
 
-O metodo restringe as opcoes do campo `uo`. Alteracoes em `base_fields` afetam
-a classe retornada; em formularios comuns, costuma ser mais seguro personalizar
-`self.fields` no `__init__()` da instancia.
+Checklist para revisar hooks:
 
-### 6.5. Desempenho no Admin
+- Em que ponto do ciclo o hook e chamado?
+- O form e os formsets ja foram validados?
+- O objeto ja possui chave primaria?
+- O metodo precisa chamar `super()`?
+- A regra pertence apenas ao Admin ou ao dominio inteiro?
+- M2M e inlines continuam sendo salvos?
+- O redirecionamento preserva os comportamentos necessarios?
+- A mensagem representa o resultado real da transacao?
+- Inclusao e edicao precisam de destinos diferentes?
+- Ha teste para sucesso, erro de validacao e excecao durante o salvamento?
 
-Uma listagem pode parecer simples e ainda executar dezenas de consultas. Isso
-acontece porque cada item de `list_display` e avaliado para cada objeto da
-pagina.
+### 3.18. URLs personalizadas dentro do Admin
 
-#### 6.5.1. N+1 com `ForeignKey`: exemplo de `TurmaAdmin`
+#### 3.18.1. Conceito
 
-O `TurmaAdmin` apresenta o campus por meio do metodo em
-`edu/admin.py:941-943`:
+O `ModelAdmin` ja cria URLs para listar, incluir, editar, excluir e consultar o
+historico. Uma **URL personalizada** acrescenta ao mesmo prefixo administrativo
+uma operacao que nao pertence ao CRUD padrao.
 
-```python
-def get_campus(self, obj):
-    return obj.curso_campus.diretoria.setor.uo
-```
+Exemplos de uso:
 
-Esse acesso atravessa quatro relacionamentos. Sem otimizacao, o fluxo pode ser:
+- abrir uma listagem com filtros predefinidos;
+- executar uma verificacao administrativa;
+- gerar uma exportacao ou relatorio especifico;
+- iniciar um fluxo de negocio;
+- processar um objeto identificado na URL;
+- apresentar uma pagina auxiliar mantendo a seguranca e o namespace do Admin.
+
+No caso de `AlunoAdmin`, a rota personalizada:
 
 ```text
-1 consulta para buscar as turmas
-+ consultas para curso_campus de cada turma
-+ consultas para diretoria de cada curso
-+ consultas para setor de cada diretoria
-+ consultas para uo de cada setor
+/admin/edu/aluno/correntes/
 ```
 
-Para uma pagina com 15 turmas, o limite teorico desse trecho seria uma
-consulta principal mais ate 60 consultas relacionadas. O numero observado pode
-variar por cache, filtros e outros componentes do Admin, mas cresce conforme a
-quantidade de linhas: esse e o padrao N+1.
+pertence ao mesmo conjunto de URLs de:
 
-O codigo real evita esse problema em `edu/admin.py:972-977`:
-
-```python
-def get_queryset(self, request):
-    if request.user.has_group_cached('Diretor Acadêmico'):
-        manager = Turma.objects
-    else:
-        manager = Turma.locals
-    return super().get_queryset(request, manager).select_related(
-        'curso_campus__diretoria__setor__uo'
-    )
+```text
+/admin/edu/aluno/
+/admin/edu/aluno/add/
+/admin/edu/aluno/<pk>/change/
 ```
 
-`select_related()` cria `JOIN`s SQL e carrega os objetos de `ForeignKey` na
-mesma consulta das turmas:
+Ela nao precisa ser declarada em `edu/urls.py`, pois e acrescentada pelo
+proprio `AlunoAdmin.get_urls()`.
 
-| Versao isolada | Consultas para listar e acessar o campus de N turmas |
-|---|---:|
-| sem `select_related()` | `1 + ate 4 x N` |
-| com `select_related()` | `1` para esse conjunto de dados |
+#### 3.18.2. Como o Django gera as URLs padrao
 
-Ele e indicado para relacionamentos de objeto unico, especialmente
-`ForeignKey` e `OneToOneField`.
-
-#### 6.5.2. `.count()` por linha: um segundo N+1
-
-O mesmo `TurmaAdmin` possui duas colunas calculadas em
-`edu/admin.py:949-957`:
+A implementacao nativa esta em
+`django/contrib/admin/options.py:681-725` na versao 4.1.5:
 
 ```python
-def get_qtd_diarios(self, obj):
-    return obj.diario_set.order_by(
-        'componente_curricular__componente'
-    ).count()
+def get_urls(self):
+    def wrap(view):
+        def wrapper(*args, **kwargs):
+            return self.admin_site.admin_view(view)(
+                *args,
+                **kwargs,
+            )
+        wrapper.model_admin = self
+        return update_wrapper(wrapper, view)
 
-def get_qtd_alunos(self, obj):
-    return obj.get_alunos_matriculados().count()
-```
-
-Cada chamada a `.count()` normalmente produz um `SELECT COUNT(...)`. Como os
-metodos sao chamados uma vez para cada turma, uma pagina de 15 registros pode
-acrescentar aproximadamente 30 consultas apenas para essas duas colunas.
-
-O `select_related()` existente nao resolve esse caso, pois diarios e alunos
-sao colecoes. As alternativas principais sao:
-
-- `annotate(Count(...))`, quando basta exibir a quantidade;
-- `prefetch_related()`, quando os proprios objetos relacionados serao usados;
-- retirar uma coluna cara, quando ela nao for essencial para a listagem.
-
-Um exemplo menor e ainda mais direto aparece em `AulaCampoAdmin`,
-`edu/admin.py:2875-2883`:
-
-```python
-def get_qtd_servidores_participantes(self, obj):
-    return obj.responsaveis.count()
-
-def get_qtd_alunos_participantes(self, obj):
-    return obj.alunos.count()
-```
-
-Uma forma de otimizar esse caso com anotacoes seria:
-
-```python
-from django.db.models import Count
-
-def get_queryset(self, request):
-    return (
-        super().get_queryset(request, AulaCampo.locals)
-        .annotate(
-            qtd_responsaveis=Count('responsaveis', distinct=True),
-            qtd_alunos=Count('alunos', distinct=True),
-        )
+    info = (
+        self.model._meta.app_label,
+        self.model._meta.model_name,
     )
 
-def get_qtd_servidores_participantes(self, obj):
-    return obj.qtd_responsaveis
-
-def get_qtd_alunos_participantes(self, obj):
-    return obj.qtd_alunos
-```
-
-Esse trecho e uma **proposta didatica de otimizacao**, nao o estado atual do
-arquivo. O uso de `distinct=True` evita multiplicacao das contagens quando as
-duas relacoes muitos-para-muitos participam do mesmo `JOIN`.
-
-#### 6.5.3. Como comparar os resultados
-
-Com o Django Debug Toolbar habilitado no ambiente de desenvolvimento:
-
-1. Abra `/admin/edu/turma/` e filtre uma pagina pequena e repetivel.
-2. Anote a quantidade de consultas e localize as repetidas.
-3. Remova temporariamente o `select_related()` apenas para demonstracao.
-4. Recarregue a mesma pagina e compare as consultas de curso, diretoria, setor
-   e campus.
-5. Restaure o codigo original.
-6. Identifique separadamente os `COUNT` gerados por `get_qtd_diarios()` e
-   `get_qtd_alunos()`.
-
-Os totais completos do Admin incluem consultas de permissao, filtros,
-paginacao e contagem geral. A comparacao deve procurar principalmente o padrao
-de SQL repetido para cada linha, e nao apenas um numero absoluto.
-
-Checklist para uma listagem:
-
-- cada coluna acessa quais relacionamentos?
-- ha `select_related()` para ForeignKey e OneToOne?
-- ha `prefetch_related()` para colecoes?
-- algum metodo executa `.count()` ou `.exists()` para cada linha?
-- busca e filtros usam campos adequados e indexados?
-- a exportacao usa o mesmo queryset e pode processar muitos registros?
-- `list_per_page` esta compativel com o custo de cada linha?
-
-O Admin mascara facilmente um N+1: uma pagina com 15 linhas pode executar
-dezenas de consultas sem que o problema seja visualmente obvio.
-
-<a id="etapa-7"></a>
-
-## Etapa 7 — Práticas de estudo
-
-### 7.1. Ler um admin pequeno de ponta a ponta
-
-**Objetivo:** compreender o fluxo sem a complexidade de `AlunoAdmin`.
-
-1. Abrir `/admin/edu/turno/`.
-2. Abrir `edu/models/cadastros_gerais.py:345-363`.
-3. Identificar campo, `Meta`, `__str__()` e `get_absolute_url()`.
-4. Abrir `edu/admin.py:320-327`.
-5. Relacionar cada atributo com a tela.
-6. Mostrar `admin.site.register(Turno, TurnoAdmin)`.
-7. Realizar uma busca por descricao.
-8. Observar a ordenacao e o botao de exportacao.
-9. Abrir `/admin/edu/turno/<pk>/change/` sem salvar alteracoes.
-
-Perguntas para os estudantes:
-
-- de onde vieram os campos do formulario?
-- por que a URL nao esta em `edu/urls.py`?
-- qual parte cria a caixa de pesquisa?
-- qual recurso pertence ao SUAP e nao ao Django?
-
-### 7.2. Adicionar e-mail a listagem de alunos
-
-**Objetivo:** criar uma coluna calculada sem alterar o model.
-
-**Arquivo:** `edu/admin.py`  
-**Classe:** `AlunoAdmin`, iniciada na linha `1601`  
-**Linhas originais afetadas:** `1602` e apos `1631`  
-**URL de teste:** `/admin/edu/aluno/`
-
-#### 7.2.1. Passo 1 - Alterar `list_display`
-
-Na linha `1602`, substitua a declaracao atual:
-
-```python
-list_display = (
-    'get_foto', 'get_info_principal', 'periodo_letivo',
-    'ano_letivo', 'get_pasta',
-)
-```
-
-pela versao com `get_email`:
-
-```python
-list_display = (
-    'get_foto',
-    'get_info_principal',
-    'get_email',
-    'periodo_letivo',
-    'ano_letivo',
-    'get_pasta',
-)
-```
-
-O nome informado em `list_display` deve corresponder a um campo do model ou a
-um metodo acessivel no Admin/model.
-
-#### 7.2.2. Passo 2 - Criar a coluna
-
-Logo depois de `get_foto.short_description = 'Foto'`, atualmente na linha
-`1631`, insira:
-
-```python
-def get_email(self, obj):
-    return obj.pessoa_fisica.email or '-'
-
-
-get_email.short_description = 'E-mail Academico'
-get_email.admin_order_field = 'pessoa_fisica__email'
-```
-
-Leitura do codigo:
-
-- `obj` e o aluno da linha atual;
-- `or '-'` evita uma celula vazia;
-- `short_description` define o cabecalho;
-- `admin_order_field` permite ordenar usando o campo relacionado real.
-
-Por que esse exemplo nao cria N+1 adicional?
-
-```python
-.select_related('ano_letivo', 'pessoa_fisica', 'situacao')
-```
-
-O relacionamento `pessoa_fisica` ja e carregado antecipadamente por
-`get_queryset()`.
-
-#### 7.2.3. Resultado esperado e validacao
-
-1. Recarregue `/admin/edu/aluno/`.
-2. Confirmar o cabecalho da coluna.
-3. Verificar aluno com e sem e-mail.
-4. Clicar no cabecalho e verificar a ordenacao.
-5. Conferir se busca, filtros e tabs continuam funcionando.
-
-O resultado esperado e uma coluna `E-mail Academico` entre as informacoes
-principais e o periodo letivo, mostrando `-` quando nao houver valor.
-
-#### 7.2.4. Como desfazer
-
-1. Remova `'get_email'` de `list_display`.
-2. Exclua o metodo `get_email()` e suas duas configuracoes.
-3. Recarregue `/admin/edu/aluno/` e confirme que a listagem voltou ao formato
-   original.
-
-Essa demonstracao nao altera model, migration nem dados do banco.
-
-### 7.3. Adicionar e remover um filtro
-
-**Objetivo:** compreender que `list_filter` controla interface e consulta, nao
-permissao.
-
-**Arquivo:** `edu/admin.py`  
-**Classe:** `AlunoAdmin`  
-**Linha original afetada:** `1603`  
-**URL de teste:** `/admin/edu/aluno/`
-
-O campo usado na demonstracao existe em `edu/models/alunos.py:377`:
-
-```python
-data_matricula = models.DateTimeFieldPlus(
-    verbose_name='Data da Matrícula',
-    auto_now_add=True,
-)
-```
-
-#### 7.3.1. Passo 1 - Adicionar o filtro
-
-Substitua a tupla de `list_filter` da linha `1603` pela versao formatada
-abaixo, acrescentando `data_matricula`:
-
-```python
-list_filter = (
-    CustomTabListFilter,
-    'ano_letivo',
-    'periodo_letivo',
-    'situacao',
-    'data_matricula',
-    'curso_campus__diretoria__setor__uo',
-    'curso_campus',
-    'polo',
-    'curso_campus__modalidade',
-)
-```
-
-Ao recarregar a tela, o Django reconhece o campo de data e oferece atalhos de
-periodo. Selecione uma opcao e observe a query string adicionada a URL. O
-resultado esperado e a listagem conter somente alunos cuja data de matricula
-atenda ao periodo escolhido.
-
-#### 7.3.2. Passo 2 - Remover o filtro temporariamente
-
-Na mesma tupla, remova temporariamente:
-
-```python
-'polo',
-```
-
-Recarregue `/admin/edu/aluno/`. O filtro de polo deve desaparecer, enquanto o
-campo do model, os polos gravados e as permissoes permanecem inalterados.
-Remover o controle visual nao e uma regra de autorizacao; o escopo continua
-sendo definido no backend.
-
-#### 7.3.3. Resultado esperado e validacao
-
-1. `Data da Matricula` aparece entre os filtros.
-2. A escolha de periodo altera os resultados e a query string.
-3. `Polo` deixa de aparecer depois da remocao.
-4. Busca, tabs e paginacao continuam funcionando em conjunto com o novo
-   filtro.
-
-#### 7.3.4. Como desfazer
-
-Restaure exatamente a declaracao original de `edu/admin.py:1603`:
-
-```python
-list_filter = (
-    CustomTabListFilter,
-    'ano_letivo',
-    'periodo_letivo',
-    'situacao',
-    'curso_campus__diretoria__setor__uo',
-    'curso_campus',
-    'polo',
-    'curso_campus__modalidade',
-)
-```
-
-Antes de manter a mudanca, avaliar:
-
-- o filtro e realmente usado?
-- sua consulta e adequada ao volume da tabela?
-- a remocao prejudica algum fluxo operacional?
-- existe teste ou documentacao que dependa dele?
-
-### 7.4. Criar uma tab simples
-
-**Objetivo:** praticar recurso exclusivo do `ModelAdminPlus`.
-
-**Arquivo:** `edu/admin.py`  
-**Classe:** `AlunoAdmin`  
-**Linhas originais afetadas:** inserir apos `1646` e alterar `1648-1649`  
-**URL de teste:** `/admin/edu/aluno/?tab=tab_sem_email_academico`
-
-`Q` ja esta importado em `edu/admin.py:3`; portanto, esta pratica nao exige
-novo import.
-
-#### 7.4.1. Passo 1 - Criar o metodo da tab
-
-Depois de `tab_integralizados.short_description = 'Migrados'`, atualmente na
-linha `1646`, insira:
-
-```python
-def tab_sem_email_academico(self, request, queryset):
-    return queryset.filter(
-        Q(pessoa_fisica__email__isnull=True)
-        | Q(pessoa_fisica__email='')
-    )
-
-
-tab_sem_email_academico.short_description = 'Sem E-mail Academico'
-```
-
-O metodo recebe o queryset ja limitado por `AlunoAdmin.get_queryset()` e
-devolve uma versao mais restrita. As duas condicoes contemplam bancos que
-representem ausencia como `NULL` ou string vazia.
-
-#### 7.4.2. Passo 2 - Registrar a tab
-
-Substitua `get_tabs()`, atualmente nas linhas `1648-1649`, por:
-
-```python
-def get_tabs(self, request):
     return [
-        'tab_suap',
-        'tab_q_academico',
-        'tab_integralizados',
-        'tab_sem_email_academico',
+        path('', wrap(self.changelist_view),
+             name='%s_%s_changelist' % info),
+        path('add/', wrap(self.add_view),
+             name='%s_%s_add' % info),
+        path('<path:object_id>/history/', wrap(self.history_view), ...),
+        path('<path:object_id>/delete/', wrap(self.delete_view), ...),
+        path('<path:object_id>/change/', wrap(self.change_view), ...),
+        path('<path:object_id>/', ...),
     ]
 ```
 
-`CustomTabListFilter` ja esta na primeira posicao de `list_filter`, na linha
-`1603`. Ele usa os nomes devolvidos por `get_tabs()` para construir as opcoes e
-chamar o metodo correspondente.
-
-#### 7.4.3. Resultado esperado e validacao
-
-1. Recarregue `/admin/edu/aluno/`.
-2. Localize a nova tab `Sem E-mail Academico`.
-3. Clique nela e confirme `tab=tab_sem_email_academico` na URL.
-4. Verifique alguns resultados: todos devem possuir e-mail nulo ou vazio.
-5. Combine a tab com ano letivo ou situacao e confirme que os filtros atuam
-   sobre o mesmo queryset.
-6. Acesse diretamente
-   `/admin/edu/aluno/?tab=tab_sem_email_academico` para repetir o teste.
-
-#### 7.4.4. Como desfazer
-
-1. Remova `tab_sem_email_academico()` e seu `short_description`.
-2. Restaure o metodo original:
-
-```python
-def get_tabs(self, request):
-    return ['tab_suap', 'tab_q_academico', 'tab_integralizados']
-```
-
-3. Recarregue a listagem e confirme que a tab deixou de existir.
-
-Essa pratica altera somente a composicao do queryset; nenhum aluno e salvo ou
-modificado.
-
-### 7.5. Analisar uma permissao contextual
-
-Sem alterar o codigo:
-
-1. Abrir `edu/admin.py:1617-1623`.
-2. Identificar a permissao `edu.change_aluno`.
-3. Identificar a excecao para **Auxiliar de Secretaria Academica**.
-4. Abrir `AlunoAdmin.get_queryset()` nas linhas `1625-1626`.
-5. Explicar por que poder editar e poder enxergar todos os registros sao regras
-   diferentes.
-6. Comparar `Aluno.locals` com `Aluno.objects`.
-7. Tentar narrar o que aconteceria com listagem e exportacao se o manager fosse
-   trocado sem analise.
-
-<a id="etapa-8"></a>
-
-## Etapa 8 — Testes e fechamento
-
-### 8.1. Testes existentes para observar
-
-O arquivo `edu/tests.py` ja acessa telas administrativas reais.
-
-Listagem, `edu/tests.py:1246-1249`:
-
-```python
-url = '/admin/edu/aluno/'
-response = self.client.get(url)
-self.assertContains(
-    response,
-    aluno.pessoa_fisica.nome,
-    status_code=200,
-)
-```
-
-Edicao, `edu/tests.py:3662-3668`:
-
-```python
-url = f'/admin/edu/aluno/{aluno.pk}/change/'
-response = self.client.get(url)
-self.assertContains(response, 'Editar ', status_code=200)
-```
-
-Para uma alteracao de coluna ou filtro, testes focados podem verificar:
-
-- status HTTP para usuario autorizado;
-- bloqueio para usuario sem permissao;
-- presenca do cabecalho ou valor esperado;
-- funcionamento da busca;
-- resultado de um filtro ou tab;
-- quantidade de consultas quando houver risco de N+1.
-
-### 8.2. Testes especificos de Admin com usuarios autorizados e nao autorizados
-
-Um teste do Admin nao deve confirmar apenas que a pagina abriu. Ele deve provar
-que cada perfil consegue executar somente as operacoes e visualizar somente os
-registros previstos pela regra de negocio.
-
-Ha duas perguntas diferentes:
-
-1. **Permissao:** o usuario pode acessar a operacao administrativa?
-2. **Escopo:** entre os objetos do model, quais ele pode visualizar ou alterar?
-
-Um usuario pode possuir `edu.view_aluno` e, ainda assim, enxergar apenas alunos
-de determinado polo ou unidade. Por isso, testar somente `has_perm()` nao testa
-completamente o comportamento de `get_queryset()`.
-
-#### 8.2.1. Ferramentas usadas nos testes do SUAP
-
-Os testes do SUAP usam a infraestrutura do Django e a classe
-`SuapTestCase`, definida em `comum/tests/tests_base.py:73-81`:
-
-```python
-@override_settings(DEBUG=True)
-class SuapTestCase(TestCase):
-    """
-    Classe base para os testes do SUAP, que ja executa o sync_permissions e
-    cria objetos basicos.
-    """
-
-    fixtures = ['initial_data']
-```
-
-Ela herda de `django.test.TestCase`, carrega os dados iniciais e prepara as
-permissoes e objetos basicos do projeto. Cada teste continua isolado: alteracoes
-feitas no banco durante um metodo de teste nao devem permanecer no metodo
-seguinte.
-
-O cliente utilizado e `SuapClient`, em
-`comum/tests/tests_base.py:36-60`. Alem do comportamento de
-`django.test.Client`, ele aceita o usuario diretamente:
-
-```python
-self.client.login(user=usuario)
-response = self.client.get('/admin/edu/aluno/')
-```
-
-O cliente simula requisicoes HTTP sem abrir um navegador. Assim, o teste passa
-por URL, `AdminSite`, permissoes, `ModelAdmin`, `ChangeList`, template e resposta.
-
-#### 8.2.2. Exemplo real existente no SUAP
-
-O teste de Chaves apresenta o padrao mais direto em
-`chaves/tests/tests.py:16-36`:
-
-```python
-class UrlsTest(SuapTestCase):
-    def setUp(self):
-        super().setUp()
-        self.client.login(
-            username=self.servidor_a.user.username,
-            password='123',
-        )
-        self.grupo = Group.objects.get(name='Operador de Chaves')
-
-    def test_get_chaves(self):
-        # O usuario esta autenticado, mas ainda nao pertence ao grupo.
-        response = self.client.get('/admin/chaves/chave/')
-        self.assertEqual(response.status_code, 403)
-
-        # O mesmo usuario passa a receber as permissoes do grupo.
-        self.servidor_a.user.groups.add(self.grupo)
-        response = self.client.get('/admin/chaves/chave/')
-        self.assertEqual(response.status_code, 200)
-```
-
-O valor didatico desse teste esta em manter o usuario e a URL iguais. A unica
-mudanca e sua participacao no grupo; portanto, a diferenca entre `403` e `200`
-e atribuida a autorizacao.
-
-> O nome segue o padrão `test_*` do Django, portanto o método é descoberto e executado automaticamente.
-
-#### 8.2.3. Respostas esperadas
-
-| Situacao | Resultado comum | O que testar |
-|---|---|---|
-| Usuario anonimo | `302` para o login | `Location` contem o destino de login e `next` |
-| Usuario autenticado sem `view` nem `change` | `403` | a listagem permanece bloqueada |
-| Usuario com `view` | `200` | a listagem e o queryset correto sao apresentados |
-| Usuario com `view`, mas sem `change` | tela de consulta ou bloqueio da alteracao | nao pode salvar mudancas |
-| Usuario com `change` | `200` no formulario e, em geral, `302` apos POST valido | o objeto foi efetivamente alterado |
-| Usuario sem `delete` | `403` ou ausencia da operacao | o objeto continua no banco |
-
-O comportamento da tela de edicao merece atencao: nas versoes atuais do Django,
-um usuario com permissao de visualizacao pode receber `200` numa pagina de
-detalhes somente para leitura. Portanto, **`GET 200` nao prova que ele pode
-alterar o objeto**. O teste de seguranca deve fazer um `POST` e conferir que o
-banco permaneceu inalterado.
-
-Tambem nao use `follow=True` no primeiro teste de acesso anonimo. Seguir o
-redirecionamento pode transformar o `302` original em um `200` da pagina de
-login e esconder o comportamento que se desejava verificar.
-
-#### 8.2.4. Teste focado da listagem de alunos
-
-O exemplo abaixo pode ser acrescentado ao final de `edu/tests.py`. Ele usa os
-usuarios basicos de `SuapTestCase` e a configuracao real de grupos criada pelo
-`sync_permissions`.
-
-```python
-from django.contrib.auth.models import Group
-from django.urls import reverse
-
-from comum.tests import SuapTestCase
-
-
-class AlunoAdminPermissionTest(SuapTestCase):
-    def setUp(self):
-        super().setUp()
-
-        # reverse() evita repetir manualmente /admin/edu/aluno/.
-        self.url = reverse('admin:edu_aluno_changelist')
-
-        self.usuario_autorizado = self.servidor_a.user
-        self.usuario_nao_autorizado = self.servidor_b.user
-
-        # O grupo recebe as permissoes definidas em edu/permissions.yaml.
-        grupo = Group.objects.get(name='Administrador Acadêmico')
-        self.usuario_autorizado.groups.add(grupo)
-
-        # Remove permissoes que poderiam vir da fixture e garante que o segundo
-        # usuario continue autenticavel, mas sem acesso ao model Aluno.
-        self.usuario_nao_autorizado.groups.clear()
-        self.usuario_nao_autorizado.user_permissions.clear()
-        self.usuario_nao_autorizado.is_superuser = False
-        self.usuario_nao_autorizado.is_staff = True
-        self.usuario_nao_autorizado.save()
-
-    def test_usuario_anonimo_e_redirecionado_para_login(self):
-        response = self.client.get(self.url)
-
-        self.assertEqual(response.status_code, 302)
-        self.assertIn('next=', response['Location'])
-
-    def test_usuario_sem_permissao_recebe_403(self):
-        self.client.login(user=self.usuario_nao_autorizado)
-
-        response = self.client.get(self.url)
-
-        self.assertEqual(response.status_code, 403)
-
-    def test_usuario_autorizado_acessa_a_listagem(self):
-        self.client.login(user=self.usuario_autorizado)
-
-        response = self.client.get(self.url)
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNotNone(response.context_data['cl'])
-```
-
-O grupo e sua permissao sobre `Aluno` podem ser conferidos em
-`edu/permissions.yaml:1-6` e `edu/permissions.yaml:46-57`. A verificacao chega
-a `ModelAdminPlus.has_view_permission()`, em
-`djtools/contrib/admin/options/__init__.py:295-305`, que delega para
-`djtools.utils.has_view_permission()`. Esta funcao, em
-`djtools/utils/__init__.py:1928-1949`, aceita `view` ou `change` para a
-visualizacao do model.
-
-#### 8.2.5. Versao mais curta usando permissoes diretamente
-
-Quando o objetivo do teste e exclusivamente o comportamento de uma permissao,
-e nao a composicao de um grupo do `permissions.yaml`, pode-se atribuir a
-permissao diretamente:
-
-```python
-from django.contrib.auth.models import Permission
-
-
-permissao = Permission.objects.get(
-    content_type__app_label='edu',
-    codename='view_aluno',
-)
-usuario.user_permissions.add(permissao)
-```
-
-Escolha a estrategia conforme o que esta sendo testado:
-
-| Objetivo | Preparacao recomendada |
-|---|---|
-| Provar que o grupo configurado no YAML funciona | adicionar o usuario ao `Group` |
-| Provar o comportamento de `view_aluno` isoladamente | adicionar `Permission` diretamente |
-| Provar uma regra contextual do Admin | preparar grupo, objeto e contexto exigidos pela regra |
-
-Depois de consultar permissoes, o Django pode guarda-las em cache na instancia
-do usuario. Se o teste adicionar ou remover permissoes **depois** de uma chamada
-a `has_perm()`, recarregue o usuario do banco ou limpe os caches antes da nova
-verificacao:
-
-```python
-usuario.refresh_from_db()
-for atributo in ('_perm_cache', '_user_perm_cache', '_group_perm_cache'):
-    usuario.__dict__.pop(atributo, None)
-```
-
-Uma alternativa ainda mais clara e usar um usuario diferente para cada cenario.
-
-#### 8.2.6. Testar permissao de visualizacao e alteracao separadamente
-
-Os codenames `view_aluno` e `change_aluno` representam capacidades diferentes.
-Um teste unitario dos hooks pode usar a instancia de Admin registrada no site:
-
-```python
-from django.contrib import admin
-from django.test import RequestFactory
-
-from edu.models import Aluno
-
-
-model_admin = admin.site._registry[Aluno]
-request = RequestFactory().get('/admin/edu/aluno/')
-request.user = usuario
-
-self.assertTrue(model_admin.has_view_permission(request))
-self.assertFalse(model_admin.has_change_permission(request, aluno))
-```
-
-Esse teste e rapido e identifica qual hook negou a operacao. Entretanto, ele nao
-substitui o teste HTTP, pois nao percorre `AdminSite.admin_view()`, URL, template
-e resposta.
-
-Para proteger a edicao, acrescente um teste de `POST` no contexto em que o aluno
-de teste ja foi criado:
-
-```python
-url = reverse('admin:edu_aluno_change', args=[aluno.pk])
-valor_original = aluno.numero_pasta
-
-self.client.login(user=usuario_apenas_visualizacao)
-response = self.client.post(url, {'numero_pasta': '999999'})
-
-self.assertEqual(response.status_code, 403)
-aluno.refresh_from_db()
-self.assertEqual(aluno.numero_pasta, valor_original)
-```
-
-O dicionario de um `POST` autorizado precisa conter todos os campos obrigatorios
-do `AlunoForm`; o trecho reduzido acima e intencionalmente usado para o cenario
-negado, no qual a verificacao de permissao deve ocorrer antes da validacao do
-formulario.
-
-#### 8.2.7. Testar escopo pelo queryset, nao apenas pelo HTML
-
-Para regras baseadas em `objects`, `locals`, campus, polo ou diretoria, crie dois
-registros:
-
-- um aluno dentro do escopo do usuario;
-- outro aluno fora do escopo.
-
-Depois do `GET`, inspecione o `ChangeList` devolvido no contexto:
-
-```python
-response = self.client.get(reverse('admin:edu_aluno_changelist'))
-self.assertEqual(response.status_code, 200)
-
-cl = response.context_data['cl']
-ids_visiveis = set(cl.queryset.values_list('pk', flat=True))
-
-self.assertIn(aluno_do_escopo.pk, ids_visiveis)
-self.assertNotIn(aluno_de_outro_escopo.pk, ids_visiveis)
-```
-
-Comparar chaves primarias e mais confiavel do que procurar nomes no HTML: nomes
-podem se repetir, aparecer em filtros ou estar fora da pagina atual. O uso de
-`cl.queryset` tambem evita que `list_per_page` esconda um objeto que pertence ao
-resultado, mas caiu em outra pagina.
-
-No `AlunoAdmin`, o conjunto inicial e definido em `edu/admin.py:1625-1626` a
-partir de `Aluno.locals`. O manager esta declarado em
-`edu/models/alunos.py:250-258` e implementado em
-`edu/managers.py:671-682`. Atualmente, ele restringe especialmente o perfil
-`Coordenador de Polo EAD` quando essa e sua unica origem de `view_aluno`.
-
-#### 8.2.8. Matriz minima recomendada
-
-Para uma alteracao relevante em um Admin, cubra pelo menos:
-
-| Teste | Garantia |
-|---|---|
-| anonimo acessa a URL | autenticacao continua obrigatoria |
-| autenticado sem permissao acessa a URL | autorizacao esta no backend |
-| usuario com `view` abre a listagem | permissao positiva funciona |
-| usuario com `view` consulta somente seu escopo | `get_queryset()` nao vaza dados |
-| usuario sem `change` envia `POST` direto | esconder botoes nao permite contornar a regra |
-| usuario com `change` envia formulario valido | fluxo autorizado continua funcionando |
-| usuario sem `delete` tenta excluir | registro permanece no banco |
-
-Sempre confira o estado final do banco nos testes de escrita. O status HTTP
-sozinho nao prova que o objeto foi ou nao foi alterado.
-
-#### 8.2.9. Execucao focada
-
-Para executar somente a classe didatica adicionada a `edu/tests.py`:
-
-```bash
-python manage.py test edu.tests.AlunoAdminPermissionTest --keepdb
-```
-
-Durante a investigacao de um erro, um metodo pode ser executado isoladamente:
-
-```bash
-python manage.py test \
-    edu.tests.AlunoAdminPermissionTest.test_usuario_sem_permissao_recebe_403 \
-    --keepdb
-```
-
-`--keepdb` reaproveita o banco de teste entre execucoes e reduz o tempo de
-preparacao. Ele nao deve ser usado para esconder dependencia indevida entre
-testes: cada metodo ainda precisa preparar explicitamente seu proprio cenario.
-
-> **Resumo didatico:** teste o mesmo endpoint com perfis diferentes, valide
-> permissao e escopo separadamente e, nas operacoes de escrita, confirme o valor
-> persistido. Uma interface sem botao nao e uma barreira de seguranca; o `POST`
-> direto tambem precisa ser recusado.
-
-### 8.3. Checklist de revisao
-
-Antes de concluir uma alteracao em `admin.py`, verificar:
-
-- o model correto foi registrado uma unica vez?
-- a mudanca usa `ModelAdminPlus` quando o modulo segue esse padrao?
-- campos de `list_display`, `search_fields` e `list_filter` existem?
-- caminhos com `__` atravessam relacionamentos validos?
-- o queryset preserva o escopo de `locals` quando necessario?
-- permissoes foram verificadas no backend?
-- colunas calculadas evitam HTML inseguro?
-- relacionamentos usados nas colunas foram otimizados?
-- actions validam estado e permissao dos objetos?
-- `super()` foi chamado nos hooks que dependem do comportamento padrao?
-- inclusao e edicao foram testadas separadamente?
-- busca, filtros, tabs, paginacao e exportacao continuam funcionando?
-- a alteracao foi testada com usuario autorizado e nao autorizado?
-
-Comandos iniciais de verificacao:
-
-```bash
-python manage.py check
-python manage.py test edu
-```
-
-O teste completo do EDU pode ser demorado. Durante o desenvolvimento, execute o
-teste mais especifico disponivel e, antes da entrega, amplie a validacao de
-acordo com o impacto da mudanca.
-
-### 8.4. Erros comuns
-
-1. Usar `objects` e ampliar dados que deveriam ser locais.
-2. Ocultar um botao sem proteger a operacao no backend.
-3. Criar uma coluna que consulta o banco para cada linha.
-4. Colocar regra de dominio apenas em `save_model()`.
-5. Esquecer `super()` em `get_queryset()`, `get_form()` ou `save_model()`.
-6. Inserir HTML com `mark_safe()` usando texto nao confiavel.
-7. Adicionar muitos filtros relacionais em uma tabela grande.
-8. Usar action em lote sem validar objetos em estados diferentes.
-9. Confundir `Aluno.pk` com a matricula na URL administrativa.
-10. Alterar templates globais quando a necessidade pertence a um unico admin.
-
-### 8.5. Quadro de responsabilidades
-
-| Necessidade | Local preferencial |
-|---|---|
-| Estrutura e relacionamento dos dados | `models.py` |
-| Validacao de entrada da tela | `forms.py` |
-| Regra valida em qualquer interface | model ou servico de dominio |
-| Colunas, filtros e ordenacao administrativa | `admin.py` |
-| Restricao dos registros listados | manager e `get_queryset()` |
-| Autorizacao administrativa | permissoes e `has_*_permission()` |
-| Processo web especifico | `urls.py`, `views.py` e template proprio |
-| Aparencia global do Admin SUAP | templates e recursos do DJTools |
-
-### 8.6. Fechamento conceitual
-
-Ao final do encontro, o estudante deve conseguir explicar o seguinte fluxo:
+A propriedade `ModelAdmin.urls` apenas devolve `self.get_urls()`. Depois,
+`AdminSite.get_urls()`, em `django/contrib/admin/sites.py:252-301`, inclui
+essas rotas sob:
 
 ```text
-O model define a entidade.
-admin.site.register() publica a entidade no AdminSite.
-ModelAdminPlus configura listagem e formulario.
-get_queryset() define o universo de dados permitido.
-busca, filtros e tabs refinam esse universo.
-permissoes decidem quais operacoes podem ser executadas.
-o form valida os dados de inclusao ou edicao.
-hooks coordenam comportamentos administrativos especificos.
-o ORM consulta ou grava no banco.
+<app_label>/<model_name>/
 ```
 
-Conclusao principal:
+Por fim, `suap/urls.py:60` acrescenta o prefixo externo `admin/`:
 
-> O Django Admin acelera interfaces internas, mas continua sujeito as mesmas
-> exigencias de seguranca, integridade, desempenho e separacao de
-> responsabilidades do restante do sistema.
-
-## D. Referencia rapida
-
-### Atributos mais usados
-
-```python
-class ExemploAdmin(ModelAdminPlus):
-    list_display = ('id', 'descricao')
-    list_filter = ('ativo',)
-    search_fields = ('descricao',)
-    ordering = ('descricao',)
-    list_per_page = 20
-    list_display_icons = True
-    export_to_xls = True
-    form = ExemploForm
-    fieldsets = ExemploForm.fieldsets
+```text
+admin/ + edu/aluno/ + correntes/
 ```
 
-### Metodos mais usados
+Resultado:
+
+```text
+/admin/edu/aluno/correntes/
+```
+
+#### 3.18.3. Estrutura de `get_urls()` personalizado
+
+O padrao encontrado no EDU e:
 
 ```python
-def get_queryset(self, request):
-    return super().get_queryset(request).select_related('relacao')
+def get_urls(self):
+    # Preserva listagem, inclusao, edicao, exclusao e historico.
+    urls = super().get_urls()
 
+    # Declara somente as URLs adicionais deste Admin.
+    my_urls = [
+        path(
+            'correntes/',
+            self.admin_site.admin_view(self.correntes),
+        )
+    ]
+
+    # As URLs especificas precisam vir antes das rotas genericas.
+    return my_urls + urls
+```
+
+Cada parte possui uma funcao:
+
+| Trecho | Responsabilidade |
+|---|---|
+| `super().get_urls()` | Recupera as URLs nativas do model |
+| `path(...)` | Define o caminho relativo ao prefixo do Admin |
+| `self.correntes` | Metodo que atende a requisicao |
+| `admin_site.admin_view(...)` | Aplica a protecao administrativa basica |
+| `my_urls + urls` | Coloca as rotas especificas antes das genericas |
+
+Se o metodo devolvesse apenas `my_urls`, as telas padrao daquele model
+deixariam de ser publicadas.
+
+#### 3.18.4. Por que a ordem `my_urls + urls` importa
+
+A ultima rota nativa, em `django/contrib/admin/options.py:711-720`, possui o
+padrao amplo:
+
+```python
+path('<path:object_id>/', ...)
+```
+
+Esse conversor aceita praticamente qualquer texto. Se as URLs nativas forem
+colocadas primeiro:
+
+```python
+# Ordem inadequada para este caso.
+return urls + my_urls
+```
+
+o texto `correntes` pode ser interpretado como `object_id`, e a URL
+personalizada nunca sera alcancada.
+
+```text
+correto:    my_urls + urls
+            correntes/ e testada antes de <object_id>/
+
+incorreto:  urls + my_urls
+            <object_id>/ pode capturar "correntes"
+```
+
+A ordem das rotas no Django e significativa: o resolvedor utiliza a primeira
+correspondencia encontrada.
+
+#### 3.18.5. Exemplo real: `AlunoAdmin.correntes()`
+
+**Arquivo:** `edu/admin.py`  
+**Linhas:** `1651-1662`
+
+```python
+def correntes(self, request):
+    url = '/admin/edu/aluno/'
+
+    if (
+        not in_group(request.user, 'Administrador Acadêmico')
+        and hasattr(request.user.get_profile(), 'funcionario')
+    ):
+        sigla_reitoria = get_sigla_reitoria()
+
+        if (
+            request.user.get_relacionamento().setor
+            and request.user.get_relacionamento().setor.uo.sigla
+            != sigla_reitoria
+        ):
+            uo_id = request.user.get_relacionamento().setor.uo_id
+            url = (
+                f'{url}?curso_campus__diretoria__setor__uo'
+                f'__id__exact={uo_id}'
+            )
+
+    return HttpResponseRedirect(url)
+
+def get_urls(self):
+    urls = super().get_urls()
+    my_urls = [
+        path(
+            'correntes/',
+            self.admin_site.admin_view(self.correntes),
+        )
+    ]
+    return my_urls + urls
+```
+
+O codigo foi apenas formatado para leitura. Seu comportamento e:
+
+1. inicia com a listagem completa de alunos;
+2. verifica se o usuario nao e Administrador Academico;
+3. identifica sua unidade organizacional;
+4. acrescenta o filtro de unidade na query string;
+5. redireciona para a changelist;
+6. a changelist processa o filtro, o queryset e as permissoes normalmente.
+
+Essa URL nao produz sua propria pagina. Ela funciona como um atalho para uma
+listagem administrativa filtrada.
+
+#### 3.18.6. O que `admin_site.admin_view()` protege
+
+A implementacao esta em
+`django/contrib/admin/sites.py:198-250`.
+
+`AdminSite.has_permission()` considera autorizado ao site administrativo o
+usuario que satisfaz:
+
+```python
+request.user.is_active and request.user.is_staff
+```
+
+`admin_view()` envolve a view e acrescenta:
+
+- verificacao de acesso ao site administrativo;
+- redirecionamento para login quando necessario;
+- `never_cache`, por padrao;
+- protecao CSRF, salvo quando a view foi explicitamente marcada como isenta;
+- preservacao dos metadados da funcao com `update_wrapper()`.
+
+Uso correto:
+
+```python
+path(
+    'correntes/',
+    self.admin_site.admin_view(self.correntes),
+)
+```
+
+Uso perigoso:
+
+```python
+# A view fica fora da protecao administrativa fornecida pelo AdminSite.
+path('correntes/', self.correntes)
+```
+
+O `ModelAdminPlus` tambem oferece `url_wrap()` em
+`djtools/contrib/admin/options/__init__.py:194-198`, que chama internamente
+`self.admin_site.admin_view(view)`. O codigo do EDU, entretanto, utiliza de
+forma explicita `admin_site.admin_view()` nos exemplos analisados.
+
+#### 3.18.7. `admin_view()` nao substitui a permissao da operacao
+
+Ser `is_active` e `is_staff` permite entrar no Admin, mas nao significa poder
+executar qualquer operacao do EDU. Uma URL personalizada deve verificar a
+permissao correspondente e, quando necessario, o objeto e seu contexto.
+
+Exemplo didatico:
+
+```python
+from django.core.exceptions import PermissionDenied
+
+def relatorio_restrito(self, request):
+    if not self.has_view_permission(request):
+        raise PermissionDenied
+
+    if not request.user.has_perm('edu.gerar_relatorio'):
+        raise PermissionDenied
+
+    ...
+```
+
+Para alterar um objeto especifico:
+
+```python
+def reprocessar(self, request, pk):
+    obj = self.get_object(request, str(pk))
+
+    if obj is None:
+        return self._get_obj_does_not_exist_redirect(
+            request,
+            self.model._meta,
+            pk,
+        )
+
+    if not self.has_change_permission(request, obj):
+        raise PermissionDenied
+
+    ...
+```
+
+`self.get_object()` e preferivel a uma consulta irrestrita porque utiliza o
+`get_queryset(request)` do Admin, conforme
+`django/contrib/admin/options.py:851-873`. Dessa forma, o objeto tambem precisa
+pertencer ao escopo visivel para o usuario.
+
+#### 3.18.8. Nomear a rota e usar `reverse()`
+
+As URLs reais de `correntes()` nao receberam `name`. Elas funcionam, mas
+obrigam o codigo a escrever o endereco diretamente. Para uma nova rota, e
+preferivel criar um nome no mesmo padrao do Admin:
+
+```python
+from django.urls import path, reverse
+
+def get_urls(self):
+    urls = super().get_urls()
+    info = (
+        self.model._meta.app_label,
+        self.model._meta.model_name,
+    )
+
+    my_urls = [
+        path(
+            'correntes/',
+            self.admin_site.admin_view(self.correntes),
+            name='%s_%s_correntes' % info,
+        )
+    ]
+    return my_urls + urls
+```
+
+Depois:
+
+```python
+reverse('admin:edu_aluno_correntes')
+```
+
+Vantagens:
+
+- acompanha uma eventual troca do prefixo `/admin/`;
+- evita repetir `app_label` e `model_name` em varios lugares;
+- reduz erros de digitacao;
+- facilita testes e refatoracoes.
+
+No codigo atual de `AlunoAdmin`, a string `'/admin/edu/aluno/'` ficaria
+invalida se o prefixo externo fosse alterado para `/gestao/`. Uma URL resolvida
+por nome acompanharia a configuracao automaticamente.
+
+#### 3.18.9. Parametros na URL
+
+Uma rota personalizada pode receber conversores:
+
+```python
+def get_urls(self):
+    urls = super().get_urls()
+    info = (
+        self.model._meta.app_label,
+        self.model._meta.model_name,
+    )
+
+    my_urls = [
+        path(
+            '<int:pk>/reprocessar/',
+            self.admin_site.admin_view(self.reprocessar),
+            name='%s_%s_reprocessar' % info,
+        )
+    ]
+    return my_urls + urls
+
+def reprocessar(self, request, pk):
+    obj = self.get_object(request, str(pk))
+    ...
+```
+
+Endereco resultante:
+
+```text
+/admin/edu/<model>/<pk>/reprocessar/
+```
+
+O conversor `<int:pk>` valida o formato numerico, mas nao verifica existencia,
+escopo ou permissao. Essas verificacoes continuam sendo responsabilidade da
+view.
+
+#### 3.18.10. GET para consultar, POST para produzir efeitos
+
+Uma URL que apenas redireciona ou apresenta dados pode responder a `GET`. Uma
+operacao que altera banco, envia e-mail ou dispara processamento deve, em
+regra, exigir `POST`.
+
+Padrao recomendado:
+
+```python
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
+
+@method_decorator(require_POST)
+def reprocessar(self, request, pk):
+    obj = self.get_object(request, str(pk))
+
+    if obj is None or not self.has_change_permission(request, obj):
+        raise PermissionDenied
+
+    obj.reprocessar()
+    return httprr('..', 'Reprocessamento concluido.')
+```
+
+Como o metodo sera envolvido por `admin_view()`, o `POST` tambem sera protegido
+por CSRF. Um botao ou formulario deve enviar o token CSRF correspondente.
+
+Usar `GET` para produzir efeitos pode causar execucao por pre-carregamento de
+links, atualizacao da pagina, robos, historico ou acesso acidental.
+
+#### 3.18.11. Segundo exemplo real: notificacao de estagios
+
+`EstagioDocenteAdmin` registra outra URL em `edu/admin.py:3410-3424`:
+
+```python
+def get_urls(self):
+    urls = super().get_urls()
+    my_urls = [
+        path(
+            'notificacao/',
+            self.admin_site.admin_view(self.notificacao),
+        )
+    ]
+    return my_urls + urls
+
+def notificacao(self, request):
+    qs = (
+        self.get_queryset(request)
+        .exclude(visitaestagiodocente__isnull=False)
+        .filter(situacao__in=[
+            EstagioDocente.SITUACAO_AGUARDANDO_ENCERRAMENTO,
+            EstagioDocente.SITUACAO_EM_ANDAMENTO,
+        ])
+    )
+
+    contador = 0
+    for obj in qs:
+        contador += obj.notificar()
+
+    return httprr(
+        request.META.get('HTTP_REFERER', '..'),
+        f'Foram enviados e-mails referentes à {contador} '
+        'prática(s) com pendências.',
+    )
+```
+
+Aspectos positivos para analisar:
+
+- usa `self.get_queryset(request)`, preservando o escopo do Admin;
+- restringe situacoes e objetos ja visitados;
+- contabiliza o resultado;
+- usa `httprr()` para mensagem e retorno.
+
+Ponto de atencao: enviar e-mails e um efeito colateral. Para uma nova
+implementacao, o fluxo mais seguro seria exigir `POST`, validar uma permissao
+especifica e, se o volume for alto, considerar uma tarefa assincrona.
+
+#### 3.18.12. Tipos de resposta
+
+O metodo associado a uma URL personalizada e uma view Django e pode retornar:
+
+| Resposta | Uso |
+|---|---|
+| `HttpResponseRedirect` | Encaminhar para outra tela |
+| `httprr()` | Redirecionar com mensagem no SUAP |
+| `TemplateResponse`/`render()` | Exibir pagina HTML |
+| `CsvResponse`/`XlsResponse` | Gerar arquivo |
+| `JsonResponse` | Responder integracao ou chamada assincrona |
+| `PDFResponse` | Entregar documento PDF |
+
+O tipo da resposta nao altera a necessidade de autenticar, autorizar e limitar
+o escopo dos objetos.
+
+#### 3.18.13. URL do Admin x URL da aplicacao
+
+| URL personalizada no `ModelAdmin` | URL declarada em `edu/urls.py` |
+|---|---|
+| Fica sob `/admin/edu/<model>/` | Fica sob `/edu/` |
+| Natural para operacao interna daquele cadastro | Natural para fluxo geral do modulo |
+| Usa namespace e contexto do `AdminSite` | Usa decorators e views da aplicacao |
+| Implementada como metodo do Admin | Implementada em `edu/views.py` |
+| Deve ser envolvida por `admin_view()` | Deve declarar sua propria protecao |
+
+Use `get_urls()` quando a operacao pertence claramente ao cadastro
+administrativo. Para fluxos reutilizados fora do Admin, processos extensos ou
+interfaces voltadas a alunos e professores, uma URL da aplicacao costuma ser
+mais adequada.
+
+#### 3.18.14. Cuidados de implementacao
+
+- Preserve `super().get_urls()`.
+- Coloque rotas especificas antes das genericas.
+- Envolva a view com `self.admin_site.admin_view()`.
+- Verifique permissao de model e regra contextual dentro da view.
+- Use `self.get_object()` ou `self.get_queryset()` para preservar escopo.
+- Prefira nomes de rota e `reverse()` a caminhos fixos.
+- Use `POST` para alteracao, envio ou processamento.
+- Proteja operacoes demoradas contra repeticao e duplo clique.
+- Valide parametros mesmo quando ha conversor na URL.
+- Teste usuario anonimo, usuario staff sem permissao, autorizado e fora do
+  escopo.
+
+#### 3.18.15. Como demonstrar em aula
+
+1. Acesse `/admin/edu/aluno/correntes/`.
+2. Observe o redirecionamento e os filtros acrescentados a URL.
+3. Abra `edu/admin.py:1651-1662` e leia primeiro a view, depois `get_urls()`.
+4. Mostre que o caminho e relativo a `/admin/edu/aluno/`.
+5. Inverta apenas conceitualmente `my_urls + urls` e explique o conflito com
+   `<path:object_id>/`.
+6. Abra `django/contrib/admin/sites.py:198-250` e diferencie acesso ao site de
+   permissao da operacao.
+7. Compare a string fixa `/admin/edu/aluno/` com uma URL criada por
+   `reverse()`.
+8. Abra `edu/admin.py:3410-3424` e discuta GET, POST e efeitos colaterais.
+9. Teste a rota com usuario autorizado e com usuario staff sem a permissao de
+   negocio.
+10. Crie, em quadro ou branch de aula, uma rota nomeada que receba `<int:pk>` e
+    use `self.get_object()`.
+
+Checklist para revisar uma URL personalizada:
+
+- Ela realmente pertence ao Admin desse model?
+- As URLs nativas foram preservadas?
+- A rota especifica vem antes de `<path:object_id>/`?
+- A view esta envolvida por `admin_view()`?
+- Existe verificacao explicita da permissao de negocio?
+- O objeto e obtido pelo queryset com escopo?
+- A operacao deveria aceitar somente `POST`?
+- A rota possui nome e pode ser resolvida com `reverse()`?
+- O retorno e adequado: HTML, redirect, arquivo ou JSON?
+- Existem testes de rota, permissao, metodo HTTP e objeto fora do escopo?
+
+### 3.19. Inlines e edicao de relacionamentos
+
+#### 3.19.1. Conceito
+
+Um **inline** permite consultar e editar objetos relacionados dentro do
+formulario administrativo do objeto principal.
+
+Exemplo do EDU:
+
+```text
+HorarioCampus (objeto pai)
+    |
+    +-- HorarioAula (objeto filho)
+    +-- HorarioAula
+    +-- HorarioAula
+```
+
+Na tela de inclusao ou edicao de `HorarioCampus`, o usuario pode preencher
+varios registros de `HorarioAula` sem abrir uma pagina separada para cada um.
+
+O inline nao cria o relacionamento. A ligacao ja precisa existir nos models,
+normalmente por uma `ForeignKey` do filho para o pai. O Admin usa essa
+informacao para construir um **inline formset**.
+
+#### 3.19.2. Model, inline e formset
+
+| Elemento | Responsabilidade |
+|---|---|
+| Model pai | Registro principal do formulario |
+| Model filho | Registro relacionado ao pai |
+| `ForeignKey` | Define o relacionamento no banco e no ORM |
+| `InlineModelAdmin` | Configura como os filhos aparecem no Admin |
+| `BaseInlineFormSet` | Agrupa, valida e salva os formularios dos filhos |
+| `ModelAdmin.inlines` | Liga as classes inline ao Admin do pai |
+
+Fluxo resumido:
+
+```text
+relacionamento nos models
+    -> classe Inline
+    -> atributo inlines do ModelAdmin
+    -> Django cria InlineFormSet
+    -> template exibe varias linhas
+    -> POST valida pai e filhos
+    -> salva pai
+    -> salva M2M e filhos
+```
+
+#### 3.19.3. Relacionamento real: `HorarioCampus` e `HorarioAula`
+
+**Arquivo:** `edu/models/cadastros_gerais.py`  
+**Linhas:** `526-578`
+
+```python
+class HorarioCampus(LogModel):
+    descricao = models.CharFieldPlus('Descrição')
+    uo = models.ForeignKeyPlus(
+        'rh.UnidadeOrganizacional',
+        verbose_name='Campus',
+        on_delete=models.CASCADE,
+    )
+    ativo = models.BooleanField('Ativo', default=True)
+    eh_padrao = models.BooleanField(
+        'Horário Padrão',
+        default=False,
+    )
+
+
+class HorarioAula(LogModel):
+    horario_campus = models.ForeignKeyPlus(
+        'edu.HorarioCampus',
+        on_delete=models.CASCADE,
+    )
+    numero = models.PositiveIntegerField(
+        verbose_name='Número',
+        choices=HORARIO_CHOICES,
+    )
+    turno = models.ForeignKeyPlus(
+        'edu.Turno',
+        on_delete=models.CASCADE,
+    )
+    inicio = models.CharFieldPlus(
+        verbose_name='Início',
+        max_length=5,
+    )
+    termino = models.CharFieldPlus(
+        verbose_name='Término',
+        max_length=5,
+    )
+```
+
+A linha fundamental e:
+
+```python
+horario_campus = models.ForeignKeyPlus(
+    'edu.HorarioCampus',
+    on_delete=models.CASCADE,
+)
+```
+
+Ela informa que cada `HorarioAula` pertence a um `HorarioCampus`. No sentido
+inverso, o Django disponibiliza por padrao:
+
+```python
+horario_campus.horarioaula_set.all()
+```
+
+`on_delete=models.CASCADE` significa que a exclusao do pai tambem pode excluir
+os horarios filhos. Esse comportamento pertence ao relacionamento do model,
+nao ao inline.
+
+#### 3.19.4. `TabularInline` e `StackedInline`
+
+As duas classes sao nativas do Django e herdam de `InlineModelAdmin`:
+
+| Classe | Template nativo | Apresentacao |
+|---|---|---|
+| `admin.TabularInline` | `admin/edit_inline/tabular.html` | Filhos em linhas de tabela |
+| `admin.StackedInline` | `admin/edit_inline/stacked.html` | Cada filho em um bloco vertical |
+
+As classes sao declaradas em
+`django/contrib/admin/options.py:2501-2506` na versao 4.1.5.
+
+Use `TabularInline` quando cada filho possui poucos campos e a comparacao entre
+linhas e importante. Use `StackedInline` quando cada objeto possui muitos
+campos ou precisa de uma composicao vertical mais legivel.
+
+#### 3.19.5. Implementacao real de `HorarioAulaInline`
+
+**Arquivo:** `edu/admin.py`  
+**Linhas:** `356-382`
+
+```python
+class HorarioAulaInline(admin.TabularInline):
+    model = HorarioAula
+    extra = 3
+
+    def formfield_for_dbfield(self, db_field, **kwargs):
+        if db_field.name == 'turno':
+            kwargs['widget'] = forms.Select
+        return super().formfield_for_dbfield(
+            db_field,
+            **kwargs,
+        )
+
+    @property
+    def media(self):
+        _media = super().media
+        _media._js.append(
+            '/static/djtools/jquery/widgets-core.js'
+        )
+        _media._js.append(
+            '/static/djtools/jquery/jquery.maskedinput.js'
+        )
+        _media._js.append(
+            '/static/edu/js/HorarioAulaInline.js'
+        )
+        return _media
+
+
+class HorarioCampusAdmin(ModelAdminPlus):
+    # Outras configuracoes omitidas.
+    inlines = [HorarioAulaInline]
+```
+
+Leitura da configuracao:
+
+- `admin.TabularInline` escolhe a apresentacao em tabela;
+- `model = HorarioAula` identifica o model filho;
+- `extra = 3` apresenta tres formularios vazios adicionais;
+- `formfield_for_dbfield()` troca o widget do campo `turno`;
+- `media` acrescenta JavaScript necessario a interface de horarios;
+- `inlines = [...]` liga a configuracao ao Admin do pai.
+
+`extra = 3` nao obriga o usuario a cadastrar tres filhos e nao cria tres
+registros vazios. Ele apenas controla quantos formularios extras sao
+apresentados inicialmente.
+
+#### 3.19.6. Configuracoes principais de um inline
+
+A classe nativa `InlineModelAdmin`, em
+`django/contrib/admin/options.py:2290-2335`, declara configuracoes como:
+
+| Opcao | Funcao |
+|---|---|
+| `model` | Model filho editado pelo inline |
+| `fk_name` | Qual `ForeignKey` aponta para o pai |
+| `form` | `ModelForm` usado por cada linha |
+| `formset` | Classe que coordena o conjunto de linhas |
+| `extra` | Quantidade inicial de formularios vazios |
+| `min_num` | Quantidade minima configurada |
+| `max_num` | Quantidade maxima configurada |
+| `fields`/`fieldsets` | Campos e organizacao visual |
+| `exclude` | Campos removidos do formulario |
+| `readonly_fields` | Campos exibidos sem edicao |
+| `can_delete` | Habilita a marcacao de exclusao |
+| `show_change_link` | Mostra link para a tela propria do filho |
+| `classes` | Classes CSS, como `collapse` |
+
+Quando o model filho possui mais de uma `ForeignKey` para o mesmo pai, o
+Django nao consegue escolher sozinho. Nesse caso, `fk_name` e obrigatorio:
+
+```python
+class VinculoInline(admin.TabularInline):
+    model = Vinculo
+    fk_name = 'responsavel'
+```
+
+Os hooks `get_extra()`, `get_min_num()` e `get_max_num()`, implementados em
+`django/contrib/admin/options.py:2337-2347`, permitem calcular essas quantidades
+conforme request e objeto.
+
+#### 3.19.7. Como o Django cria os inlines
+
+O ciclo comeca em `ModelAdmin.get_inline_instances()`, implementado em
+`django/contrib/admin/options.py:664-679`:
+
+```python
+def get_inline_instances(self, request, obj=None):
+    inline_instances = []
+
+    for inline_class in self.get_inlines(request, obj):
+        inline = inline_class(self.model, self.admin_site)
+
+        if not (
+            inline.has_view_or_change_permission(request, obj)
+            or inline.has_add_permission(request, obj)
+            or inline.has_delete_permission(request, obj)
+        ):
+            continue
+
+        if not inline.has_add_permission(request, obj):
+            inline.max_num = 0
+
+        inline_instances.append(inline)
+
+    return inline_instances
+```
+
+Em seguida, `get_formsets_with_inlines()`, nas linhas `900-905`, pede a cada
+inline sua classe de formset:
+
+```python
+for inline in self.get_inline_instances(request, obj):
+    yield inline.get_formset(request, obj), inline
+```
+
+`InlineModelAdmin.get_formset()`, em
+`django/contrib/admin/options.py:2349-2401`, combina model, form, formset,
+`fk_name`, campos, exclusoes, quantidades e permissao de excluir para chamar a
+factory de inline formsets.
+
+#### 3.19.8. O que e um inline formset
+
+Um formset e um conjunto coordenado de formularios semelhantes. No inline, ele
+possui informacoes adicionais sobre o pai e a `ForeignKey` que deve ser
+preenchida nos filhos.
+
+No `POST`, aparecem campos de controle semelhantes a:
+
+```text
+horarioaula_set-TOTAL_FORMS
+horarioaula_set-INITIAL_FORMS
+horarioaula_set-0-numero
+horarioaula_set-0-turno
+horarioaula_set-0-inicio
+horarioaula_set-0-termino
+horarioaula_set-0-DELETE
+```
+
+O **management form** informa quantas linhas foram enviadas e quantas ja
+existiam. Os indices `0`, `1`, `2` identificam cada formulario do conjunto. O
+campo `DELETE` marca uma instancia existente para exclusao, quando permitida.
+
+Nao se deve processar esses campos manualmente. O `BaseInlineFormSet` valida a
+estrutura, associa os filhos ao pai e organiza inclusoes, alteracoes e
+exclusoes.
+
+#### 3.19.9. Ordem de validacao e salvamento
+
+O fluxo estudado no topico de hooks inclui os inlines:
+
+```text
+form principal.is_valid()
+    +
+all_valid(formsets)
+    |
+    v
+save_form(commit=False)
+    -> instancia pai ainda nao persistida
+save_model()
+    -> salva pai e obtem PK
+save_related()
+    -> form.save_m2m()
+    -> save_formset() para cada inline
+```
+
+A implementacao esta em:
+
+- `django/contrib/admin/options.py:1790-1812`: validacao e ordem geral;
+- `django/contrib/admin/options.py:1237-1253`: `save_formset()` e
+  `save_related()`;
+- `django/contrib/admin/options.py:2254-2287`: criacao dos formsets.
+
+O pai e salvo primeiro porque os filhos precisam de sua chave primaria. Na
+inclusao, os formularios podem ser exibidos quando `obj=None`, mas a
+`ForeignKey` so e persistida depois que o pai existe no banco.
+
+Se qualquer formset for invalido, o objeto e os filhos nao seguem para o ciclo
+normal de salvamento. O `ModelAdminPlus` ainda envolve `add_view()` e
+`change_view()` em `transaction.atomic`, conforme
+`djtools/contrib/admin/options/__init__.py:411-439`.
+
+#### 3.19.10. Validacao conjunta das linhas
+
+Validacoes de um unico filho podem ficar no `ModelForm` daquela linha. Regras
+que dependem do conjunto pertencem ao `BaseInlineFormSet.clean()`.
+
+Exemplo real:
+
+**Inline:** `edu/admin.py:3029-3045`
+
+```python
+class ItemConfiguracaoAvaliacaoInline(admin.TabularInline):
+    formset = ItemConfiguracaoAvaliacaoFormset
+    model = ItemConfiguracaoAvaliacao
+    extra = 0
+
+
+class ConfiguracaoAvaliacaoAdmin(ModelAdminPlus):
+    inlines = [ItemConfiguracaoAvaliacaoInline]
+```
+
+**Formset:** `edu/forms.py:9344-9372`
+
+```python
+class ItemConfiguracaoAvaliacaoFormset(
+    forms.models.BaseInlineFormSet
+):
+    def clean(self):
+        # Parte do codigo foi resumida para destacar a regra conjunta.
+        tem_avaliacao_atitudinal = False
+
+        for item in self.cleaned_data:
+            if (
+                item.get('tipo')
+                == ItemConfiguracaoAvaliacao.TIPO_ATITUDINAL
+            ):
+                if tem_avaliacao_atitudinal:
+                    raise ValidationError(
+                        'Não pode existir mais de uma avaliação '
+                        'do tipo atitudinal.'
+                    )
+                tem_avaliacao_atitudinal = True
+```
+
+O formset consegue comparar todas as linhas. Um formulario isolado nao saberia
+se outra linha tambem foi marcada como avaliacao atitudinal. A implementacao
+real ainda valida exclusao, notas ja lancadas e quantidade minima.
+
+Ao sobrescrever `clean()`, e recomendavel iniciar com:
+
+```python
+def clean(self):
+    super().clean()
+
+    if any(self.errors):
+        return
+
+    ...
+```
+
+Isso preserva validacoes da classe-base e evita executar regras conjuntas
+sobre formularios individuais que ja possuem erros. O exemplo real analisado
+possui tratamento proprio e deve ser lido integralmente antes de altera-lo.
+
+#### 3.19.11. Permissoes do pai e dos filhos
+
+O Django considera dois niveis:
+
+1. permissao para incluir ou alterar o objeto pai;
+2. permissoes de visualizar, incluir, alterar ou excluir o model filho.
+
+`get_inline_instances()`, em `django/contrib/admin/options.py:664-679`, ignora
+um inline quando o usuario nao possui nenhuma operacao permitida. Se nao puder
+incluir filhos, `max_num` e ajustado para zero.
+
+`get_inline_formsets()`, em
+`django/contrib/admin/options.py:1681-1717`, tambem verifica se o pai pode ser
+editado. Sem permissao de alteracao no pai, desabilita inclusao, alteracao e
+exclusao dos filhos e apresenta o que for permitido em modo de consulta.
+
+Os metodos podem ser sobrescritos no inline:
+
+```python
+def has_add_permission(self, request, obj):
+    ...
 
 def has_change_permission(self, request, obj=None):
-    return super().has_change_permission(request, obj)
+    ...
 
-
-def get_form(self, request, obj=None, **kwargs):
-    return super().get_form(request, obj, **kwargs)
-
-
-def save_model(self, request, obj, form, change):
-    super().save_model(request, obj, form, change)
+def has_delete_permission(self, request, obj=None):
+    ...
 ```
 
-### Caminhos principais para consulta
+Ocultar o campo `DELETE` nao substitui a verificacao de permissao no servidor.
 
-- `edu/admin.py`
-- `edu/forms.py`
-- `edu/models/`
-- `edu/permissions.yaml`
-- `edu/tests.py`
-- `djtools/contrib/admin/options/__init__.py`
-- `djtools/contrib/admin/filters/__init__.py`
-- `djtools/templates/adminutils/`
-- `suap/urls.py`
+#### 3.19.12. `TabularInlinePlus`: extensao do SUAP
+
+`TabularInlinePlus` nao pertence ao Django. Ele e implementado pelo DJTools em
+`djtools/contrib/admin/options/__init__.py:59-68`:
+
+```python
+class TabularInlinePlus(admin.TabularInline):
+    formfield_overrides = FORMFIELD_OVERRIDES
+
+    def get_formset(self, request, obj=None, **kwargs):
+        FormSetClass = super().get_formset(
+            request,
+            obj,
+            **kwargs,
+        )
+        FormSetClass.form.request = request
+        return FormSetClass
+```
+
+Ele preserva todo o comportamento do `TabularInline` e acrescenta:
+
+- widgets padronizados do SUAP para data, data/hora e hora;
+- disponibilizacao de `request` na classe de form usada por cada linha.
+
+Existe tambem `StackedInlinePlus`, em
+`djtools/contrib/admin/options/__init__.py:71-84`, com a mesma integracao de
+request e campos regionais, mas usando a apresentacao empilhada.
+
+Comparacao:
+
+| Recurso | `TabularInline` | `TabularInlinePlus` |
+|---|---:|---:|
+| Edicao tabular de filhos | Sim | Sim, por heranca |
+| Formset e management form | Sim | Sim |
+| Permissoes dos filhos | Sim | Sim |
+| Widgets regionais do DJTools | Nao | Sim |
+| `request` disponivel no form | Nao por esse mecanismo | Sim |
+
+#### 3.19.13. Exemplo real com `TabularInlinePlus`
+
+`MatrizCursoAdmin`, em `edu/admin.py:3645-3661`, edita dois tipos de filho:
+
+```python
+class AutorizacaoInline(TabularInlinePlus):
+    model = Autorizacao
+    extra = 1
+
+
+class ReconhecimentoInline(TabularInlinePlus):
+    model = Reconhecimento
+    extra = 1
+
+
+class MatrizCursoAdmin(ModelAdminPlus):
+    inlines = AutorizacaoInline, ReconhecimentoInline
+    fields = 'curso_campus', 'matriz'
+```
+
+Os models filhos apontam para `MatrizCurso` em
+`edu/models/cursos.py:1286-1343`:
+
+```python
+class Autorizacao(models.ModelPlus):
+    matriz_curso = models.ForeignKeyPlus(
+        MatrizCurso,
+        verbose_name='Matriz Curso',
+        on_delete=models.CASCADE,
+    )
+
+
+class Reconhecimento(models.ModelPlus):
+    matriz_curso = models.ForeignKeyPlus(
+        MatrizCurso,
+        verbose_name='Matriz Curso',
+        on_delete=models.CASCADE,
+    )
+```
+
+Na mesma tela, o pai possui seus campos e cada classe inline produz um formset
+independente. Cada formset recebe prefixo proprio para que os dados nao se
+misturem no `POST`.
+
+#### 3.19.14. Inline com formset personalizado
+
+`ConteudoMiniCursoInline`, em `edu/admin.py:599-615`, demonstra a associacao
+explicita de uma classe de formset:
+
+```python
+class ConteudoMiniCursoInline(admin.TabularInline):
+    formset = ConteudoMinicursoFormset
+    model = ConteudoMinicurso
+    extra = 0
+
+
+class MinicursoAdmin(ModelAdminPlus):
+    form = MinicursoForm
+    inlines = [ConteudoMiniCursoInline]
+```
+
+O relacionamento esta em `edu/models/cursos.py:1432-1439`:
+
+```python
+class ConteudoMinicurso(LogModel):
+    descricao = models.CharFieldPlus('Descrição')
+    ch = models.PositiveIntegerField('Carga Horária')
+    minicurso = models.ForeignKeyPlus(
+        'edu.Minicurso',
+        on_delete=models.CASCADE,
+    )
+```
+
+`extra = 0` evita linhas vazias iniciais; novas linhas podem ser acrescentadas
+pelo mecanismo JavaScript do inline. O formset personalizado comeca em
+`edu/forms.py:11857` e deve ser consultado quando a regra envolver a soma ou a
+combinacao dos conteudos.
+
+#### 3.19.15. Personalizacao de campos e arquivos de midia
+
+O `HorarioAulaInline` sobrescreve `formfield_for_dbfield()` para substituir o
+widget de `turno`:
+
+```python
+def formfield_for_dbfield(self, db_field, **kwargs):
+    if db_field.name == 'turno':
+        kwargs['widget'] = forms.Select
+    return super().formfield_for_dbfield(db_field, **kwargs)
+```
+
+Esse hook recebe cada campo do model durante a construcao do form. A chamada a
+`super()` precisa ser preservada para que o Django efetivamente produza o
+campo.
+
+A propriedade `media` combina os arquivos JS do inline nativo com scripts do
+SUAP. O uso de `super().media` e importante: substitui-lo por uma midia vazia
+pode remover `admin/js/inlines.js`, responsavel por adicionar e remover linhas
+dinamicamente.
+
+#### 3.19.16. Desempenho e volume
+
+Inlines carregam varios formularios, escolhas e relacionamentos na mesma
+pagina. Um numero grande de filhos pode tornar a tela lenta e o `POST` muito
+pesado.
+
+Cuidados:
+
+- evite `extra` excessivo;
+- limite opcoes de `ModelChoiceField` quando necessario;
+- use autocomplete para relacionamentos com muitos registros;
+- otimize querysets de campos relacionados;
+- considere uma tela/listagem separada quando houver centenas de filhos;
+- nao execute consultas repetidas em cada formulario do formset;
+- avalie `max_num` como regra de interface e valide tambem a regra de negocio.
+
+Inline e adequado quando os filhos fazem parte da manutencao natural do pai.
+Ele nao e uma boa escolha para qualquer relacionamento apenas porque existe
+uma `ForeignKey`.
+
+#### 3.19.17. Erros frequentes
+
+1. Definir o inline sem uma `ForeignKey` valida para o pai.
+2. Esquecer `fk_name` quando existem duas FKs para o mesmo model.
+3. Confundir `extra` com quantidade minima obrigatoria.
+4. Validar uma regra conjunta em apenas um formulario filho.
+5. Sobrescrever `save_related()` sem chamar `super()`.
+6. Permitir exclusao visual sem verificar `has_delete_permission()`.
+7. Remover a midia nativa e quebrar a adicao dinamica de linhas.
+8. Carregar milhares de opcoes ou centenas de filhos na mesma pagina.
+9. Colocar no inline uma regra essencial que outras entradas do sistema podem
+   ignorar.
+10. Testar apenas edicao e esquecer o caso de inclusao, no qual `obj=None`.
+
+#### 3.19.18. Como demonstrar em aula
+
+1. Abra `edu/models/cadastros_gerais.py:526-578` e identifique pai, filho e
+   `ForeignKey`.
+2. Abra `edu/admin.py:356-382` e leia `HorarioAulaInline` linha a linha.
+3. Acesse `/admin/edu/horariocampus/` e abra um registro para edicao.
+4. Relacione as linhas existentes a `horarioaula_set`.
+5. Mostre os tres formularios vazios produzidos por `extra = 3`.
+6. Adicione, altere e marque uma linha para exclusao antes de salvar.
+7. No navegador, mostre `TOTAL_FORMS`, `INITIAL_FORMS` e os prefixos.
+8. Provoque um erro em uma linha e confirme que pai e filhos nao concluem o
+   ciclo normal de salvamento.
+9. Abra `edu/forms.py:9344-9372` e mostre uma validacao conjunta real.
+10. Compare `admin.TabularInline` com `TabularInlinePlus`, implementado em
+    `djtools/contrib/admin/options/__init__.py:59-68`.
+11. Abra `MatrizCursoAdmin`, em `edu/admin.py:3645-3661`, e mostre dois
+    formsets independentes na mesma tela.
+
+Checklist para revisar um inline:
+
+- Qual e o model pai e qual e o filho?
+- Qual `ForeignKey` liga os dois?
+- E necessario declarar `fk_name`?
+- A apresentacao deve ser tabular ou empilhada?
+- Quantas linhas extras fazem sentido?
+- Ha limites minimo e maximo de negocio?
+- A validacao pertence ao form individual ou ao formset?
+- As permissoes do pai e do filho estao corretas?
+- O `save_related()` continua sendo executado?
+- O request precisa estar disponivel no form, justificando `InlinePlus`?
+- O volume de filhos e adequado para uma unica pagina?
+- Inclusao, edicao e exclusao foram testadas?
+
+### 3.20. Resumo para consulta
+
+- `list_display`: colunas;
+- `list_display_links`: colunas clicaveis;
+- `list_filter`: filtros estruturados;
+- `search_fields`: busca textual;
+- `ordering`: ordem inicial;
+- `list_per_page`: tamanho da pagina;
+- `fieldsets`: grupos e ordem dos campos do form;
+- `get_queryset()`: conjunto inicial, escopo e otimizacao da consulta;
+- `has_*_permission()`: autorizacao das operacoes administrativas;
+- `changelist_view()`: coordena permissao, actions, contexto e resposta;
+- `ChangeListPlus`: interpreta busca, filtros, tabs, ordem e paginacao;
+- `actions`: comandos executados sobre o queryset selecionado na listagem;
+- hooks de salvamento: personalizam a persistencia do form administrativo;
+- hooks de resposta: escolhem mensagem e destino depois do salvamento;
+- `get_urls()`: acrescenta operacoes ao conjunto de rotas do `ModelAdmin`;
+- `admin_view()`: protege o acesso administrativo basico da URL personalizada;
+- inline: edita objetos filhos dentro do formulario administrativo do pai;
+- inline formset: valida e salva conjuntamente os formularios relacionados;
+- `list_filter_autocomplete_form_filters`: dependencia entre filtros do SUAP;
+- `list_display_icons`: icones de visualizar/editar do SUAP;
+- `export_to_xls`: exportacao XLS do DJTools;
+- `export_to_sophia`: CSV especifico desta instalacao.
+
+---
+
+## Etapa 4 - Por que declarar `form = AlunoForm`?
+
+Sem `form`, o Django usa `ModelAdmin.get_form()` para chamar
+`modelform_factory()` e gerar um `ModelForm` a partir dos campos do model. Isso
+e suficiente para um cadastro simples, como `Turno`.
+
+O aluno nao e um cadastro simples. `AlunoAdmin` declara em
+`edu/admin.py:1612-1613`:
+
+```python
+form = AlunoForm
+fieldsets = AlunoForm.fieldsets
+```
+
+`AlunoForm`, em `edu/forms.py:215-294`, acrescenta comportamentos que o form
+automatico nao poderia deduzir apenas do model:
+
+- campos que representam dados de `PessoaFisica`, como nome, nascimento e CPF;
+- campos e widgets Plus, inclusive autocomplete de cartorio e cidade;
+- filtros encadeados entre estado e cidade;
+- labels, ajuda, obrigatoriedade e escolhas especificas;
+- organizacao visual em `fieldsets`;
+- JavaScript proprio em `class Media`.
+
+O construtor, iniciado em `edu/forms.py:296`, carrega valores relacionados na
+edicao. Os metodos de validacao e salvamento da classe sincronizam dados que
+nao pertencem somente a uma tabela. Portanto:
+
+```text
+form automatico
+  = bom quando campos do model e validacoes padrao bastam
+
+form personalizado
+  = necessario quando existem campos extras, widgets, regras, relacoes,
+    inicializacao ou salvamento especializado
+```
+
+O `ModelAdminPlus.get_form()`, em
+`djtools/contrib/admin/options/__init__.py:392-409`, ainda disponibiliza o
+`request` na classe selecionada. Assim, um form administrativo do SUAP pode
+adaptar campos e validacoes ao usuario atual.
+
+---
+
+## Etapa 5 - Demonstracao guiada
+
+### 5.1. Exemplo simples: Turnos
+
+1. Abra `edu/models/cadastros_gerais.py:345-363` e identifique o model.
+2. Abra `edu/admin.py:320-328` e leia cada configuracao.
+3. Acesse `/admin/edu/turno/`.
+4. Observe `id` e `descricao` definidos em `list_display`.
+5. Pesquise parte de uma descricao.
+6. Acesse `/admin/edu/turno/add/` e mostre o form gerado automaticamente.
+7. Edite um item em `/admin/edu/turno/<pk>/change/`.
+8. Mostre o botao de XLS habilitado pelo `ModelAdminPlus`.
+
+### 5.2. Exemplo integrado: Alunos
+
+1. Abra `edu/admin.py:1601-1615`.
+2. Acesse `/admin/edu/aluno/`.
+3. Relacione cada coluna da tela a `list_display`.
+4. Use a busca e acompanhe os campos de `search_fields`.
+5. Aplique unidade, curso, situacao e ano como filtros.
+6. Mostre que os cursos do autocomplete dependem da unidade selecionada.
+7. Confirme a paginacao de 15 registros e a ordem decrescente por ID.
+8. Mostre os icones e explique que dependem das permissoes.
+9. Exporte a listagem filtrada para XLS.
+10. Abra um aluno e relacione as secoes da tela a `AlunoForm.fieldsets`.
+
+### 5.3. Fluxo completo para leitura de qualquer Admin
+
+```text
+1. localizar o model
+2. localizar class <Model>Admin
+3. localizar admin.site.register(...)
+4. identificar app_label e model_name
+5. montar /admin/<app>/<model>/
+6. ler list_display, busca, filtros, ordem e paginacao
+7. verificar get_queryset() e permissoes
+8. verificar se ha form personalizado
+9. identificar recursos do Django e extensoes do DJTools
+```
+
+## F. Perguntas de revisao
+
+1. Por que nao existe uma URL de `TurnoAdmin` em `edu/urls.py`?
+2. O que muda no sistema se `admin.site.register(Turno, TurnoAdmin)` for
+   removido?
+3. Qual e a diferenca entre `list_filter` e `search_fields`?
+4. `list_display_icons = True` concede permissao de edicao?
+5. Por que `AlunoAdmin` precisa de `AlunoForm`, mas `TurnoAdmin` nao?
+6. Qual parte de `AlunoAdmin` limita os alunos visiveis ao usuario?
+7. Quais atributos pertencem ao Django e quais sao extensoes do DJTools?
+
+## G. Referencias principais
+
+| Assunto | Arquivo e linhas |
+|---|---|
+| Versao do Django | `requirements/base.txt:1-2` |
+| Prefixo geral do Admin | `suap/urls.py:56-62` |
+| Model `Turno` | `edu/models/cadastros_gerais.py:345-363` |
+| `TurnoAdmin` e registro | `edu/admin.py:320-328` |
+| `AlunoAdmin` | `edu/admin.py:1601-1870` |
+| `AlunoForm` | `edu/forms.py:215-408` |
+| Escopo de `AlunoAdmin` | `edu/admin.py:1625-1626` |
+| Managers de `Aluno` | `edu/models/alunos.py:250-256` e `edu/managers.py:630-682` |
+| Permissoes de `AlunoAdmin` | `edu/admin.py:1617-1623` |
+| Permissoes no `ModelAdminPlus` | `djtools/contrib/admin/options/__init__.py:295-308` |
+| Helpers de permissao | `djtools/utils/__init__.py:1859-2003` |
+| `changelist_view()` do SUAP | `djtools/contrib/admin/options/__init__.py:348-385` |
+| Criacao do `ChangeListPlus` | `djtools/contrib/admin/options/__init__.py:200-206` |
+| Actions de `DiarioAdmin` | `edu/admin.py:1053-1111` |
+| Actions dinamicas de `MaterialAulaAdmin` | `edu/admin.py:2406-2428` |
+| Actions no `ModelAdminPlus` | `djtools/contrib/admin/options/__init__.py:148-154` |
+| Hooks de `MatrizAdmin` | `edu/admin.py:725-753` |
+| Resposta de `ProfessorAdmin` | `edu/admin.py:1540-1541` |
+| Transacoes do Admin | `djtools/contrib/admin/options/__init__.py:411-443` |
+| Redirecionamento `httprr()` | `djtools/utils/response.py:24-84` |
+| URL personalizada de `AlunoAdmin` | `edu/admin.py:1651-1662` |
+| URL de notificacao de estagios | `edu/admin.py:3410-3424` |
+| Wrapper `admin_view()` | `django/contrib/admin/sites.py:198-250` |
+| URLs nativas do `ModelAdmin` | `django/contrib/admin/options.py:681-725` |
+| `HorarioAulaInline` | `edu/admin.py:356-382` |
+| Models de horarios | `edu/models/cadastros_gerais.py:526-578` |
+| Formset de itens de avaliacao | `edu/forms.py:9344-9372` |
+| `TabularInlinePlus` e `StackedInlinePlus` | `djtools/contrib/admin/options/__init__.py:59-84` |
+| Inlines de `MatrizCursoAdmin` | `edu/admin.py:3645-3661` |
+| `ModelAdminPlus` | `djtools/contrib/admin/options/__init__.py:87-445` |
+| `ChangeListPlus` | `djtools/contrib/admin/views/__init__.py:19-170` |
+| Template e fragmento da listagem | `djtools/templates/adminutils/change_list.html:1-203` e `djtools/templates/adminutils/content_main_admin.html:13-70` |
+| Filtro autocomplete | `djtools/contrib/admin/filters/__init__.py:174-215` |
+| Metaclasse LPS | `djtools/lps.py:44-64` |
+| Tarefa de exportacao | `djtools/tasks.py:48-89` |
+
